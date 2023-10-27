@@ -3,7 +3,7 @@ import java.net.InetAddress;
 public class Messagem
 {
     InetAddress host;
-    byte[] messagem; //Get job list; ExecJob size;
+    byte[] messagem; //Get job list; ExecJob size; JobReport report;
     int size;
 
     public Messagem(InetAddress host, byte[] messagem)
