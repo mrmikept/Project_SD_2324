@@ -7,7 +7,7 @@ public class Cliente {
     }
 
     public void registo() {
-        System.out.println("Insere email:");
+        System.out.println("Insere user:");
         Scanner scanner = new Scanner(System. in);
         String email = scanner. nextLine();
         System.out.println("Insere password:");
@@ -19,7 +19,7 @@ public class Cliente {
     public void login() {
         int i = 1;
         while (i==1) {
-            System.out.println("Insere email:");
+            System.out.println("Insere user:");
             Scanner scanner = new Scanner(System.in);
             String email = scanner.nextLine();
             System.out.println("Insere password:");
