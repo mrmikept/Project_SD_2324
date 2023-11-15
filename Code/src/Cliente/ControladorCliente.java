@@ -1,37 +1,31 @@
 package Cliente;
 
+import java.util.*;
+
 public class ControladorCliente {
-    private Cliente cliente;
+    private Sistema cliente;
 
-    public void read_email() {
+    public ControladorCliente(Sistema cliente) {
+        this.cliente = cliente;
+    }
+
+    public String read_line() {
         Scanner scanner = new Scanner(System.in);
-        String email = scanner.nextLine();
-        this.cliente.set_email(email);
+        return scanner.nextLine();
     }
 
-    public void read_pass(){
-        Scanner scanner = new Scanner(System. in);
-        String pass = scanner. nextLine();
-        this.cliente.set_pass(pass);
-    }
-
-    public boolean cliente_login() {
+    public boolean cliente_login(String email, String pass) {
         //return 1 if sucessful 0 if not
-        return this.cliente.login();
+        return cliente.login(email,pass);
 
     }
 
-    public boolean cliente_registo() {
-        return this.cliente.registo();
+    public boolean cliente_registo(String email, String pass) {
+        return cliente.registo(email,pass);
     }
 
-    public boolean do_job() {
+    public boolean do_job(String s) {
+        return true;
 
     }
-
-    public static void main(String[] args) {
-        //cliente.start_socket();
-
-    }
-
 }

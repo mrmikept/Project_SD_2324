@@ -5,9 +5,11 @@ import java.util.Scanner;
 public class VistaCliente
 {
     ControladorCliente cc;
-    public void run(){
 
-        this.cc = new ControladorCliente();
+    public VistaCliente(ControladorCliente cc){
+        this.cc = cc;
+    }
+    public void run(){
 
         menuInicio();
         MenuCliente();
@@ -24,15 +26,15 @@ public class VistaCliente
 
             if (x == 1 || x == 2){
                 System.out.println("Insira o seu email: ");
-                cc.read_email();
+                String email = cc.read_line();
                 System.out.println("Introduza a sua password: ");
-                cc.read_pass();
+                String pass = cc.read_line();
 
                 if (x == 1){
-                    if (!cc.cliente_login()) System.out.println("Login sem sucesso");
+                    if (!cc.cliente_login(email, pass)) System.out.println("Login sem sucesso");
                 }
                 if (x == 2){
-                    if (!cc.cliente_registo()) System.out.println("Registo sem sucesso");
+                    if (!cc.cliente_registo(email, pass)) System.out.println("Registo sem sucesso");
                 }
             }
         }while (x != 0);
@@ -56,13 +58,13 @@ public class VistaCliente
 
                 switch (x){
                     case 1:
+                        // Manda para o controlador as informações e no controlador chama a função para fazer o pedido
                         System.out.println("Código Tarefa: ");
-                        //cc.readTarefa()
+                        String s1 = cc.read_line();
 
                         System.out.println("Memória necessária: ");
-                        //cc.readMemory()
-
-                        // Manda para o controlador as informações e no controlador chama a função para fazer o pedido
+                        String s2 = cc.read_line();
+                        cc.do_job(s1 + s2);
 
                     case 2:
                         // Manda para o controlador para ver a lista de pedidos
@@ -71,7 +73,7 @@ public class VistaCliente
                         // Manda para o controlador para ver o estado
                 }
         } while (x != 0);
-
+        System.exit(0);
     }
 
 
