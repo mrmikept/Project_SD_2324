@@ -3,7 +3,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.PriorityQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 
 public class Servidor implements Runnable{
 
@@ -11,7 +11,7 @@ public class Servidor implements Runnable{
     private ServerSocket serverSocket;
     private Socket clientSocket;
     private ArrayList<Thread> threads;
-    private PriorityQueue<Messagem> queue; // Ler melhor sobre isto
+    private PriorityBlockingQueue<Messagem> queue; // Ler melhor sobre isto
 
     //queue com jobs e o utilizador que os pediu
 
@@ -19,7 +19,7 @@ public class Servidor implements Runnable{
     {
         this.registados = new HashMap<>();
         this.threads = new ArrayList<>();
-        this.queue = new PriorityQueue<>();
+        this.queue = new PriorityBlockingQueue<>();
     }
 
     public void startSocket()
@@ -39,26 +39,33 @@ public class Servidor implements Runnable{
 
 
     public int adicionaConta(String user, String password) {
-        if loginConta(user,password){ //Confirmar se conta nao existe ja
+        if (loginConta(user,password) == 1){ //Confirmar se conta nao existe ja
             registados.put(user,password); //Adicionar conta a hashmap
             return 1; //Conta adicionada com sucesso
         }
         return -1; //Caso nao seja possivel adicionar conta
     }
 
-    //Importado do Example.java dado pelos profs
-    public execJob(byte[] tarefa) {
+    //Importado do Example.java dado pelos professores
+    public void execJob(byte[] tarefa) {
          
         try {
-
             // executar a tarefa
-            byte[] output = JobFunction.execute(tarefa);
+
+            byte[] output = sd23.JobFunction.execute(tarefa); //Output da tarefa
 
             // utilizar o resultado ou reportar o erro
             System.err.println("success, returned "+output.length+" bytes");
-        } catch (JobFunctionException e) {
+        } catch (sd23.JobFunctionException e) {
             System.err.println("job failed: code="+e.getCode()+" message="+e.getMessage());
         }
+    }
+
+    public static void main(String[] args) {
+        Servidor sv = new Servidor();
+        int teste = 500;
+       // byte[] bytes =
+        //sv.execJob();
     }
 
     @Override
