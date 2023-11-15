@@ -1,3 +1,5 @@
+package Cliente;
+
 import java.util.Scanner;
 
 public class Cliente {
@@ -25,7 +27,7 @@ public class Cliente {
             System.out.println("Insere password:");
             scanner = new Scanner(System.in);
             String password = scanner.nextLine();
-            // Servidor verifica
+            // Servidor.Servidor verifica
             // Caso esteja correto retorna 0
             // E sai do ciclo
         }
