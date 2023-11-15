@@ -10,7 +10,7 @@ import java.util.List;
 public class Ficheiro {
 
 
-    public static void escreverResultado(int tarefa, int resultaddo, String path) throws IOException {
+    public static void escreverResultado(int tarefa, int resultado, String path) throws IOException {
 
         String pasta = Paths.get(path).toAbsolutePath().getParent().toString();
         String pasta2 = pasta + "/Resultados";
@@ -20,7 +20,7 @@ public class Ficheiro {
             File ficheiro = new File(pasta2, "teste.csv");
             ficheiro.createNewFile();
             FileWriter f = new FileWriter(ficheiro);
-            f.write("Tarefa " + tarefa + ": " + resultaddo);
+            f.write("Tarefa " + tarefa + ": " + resultado);
             f.close();
         }
         else {
@@ -28,7 +28,7 @@ public class Ficheiro {
             File ficheiro = new File(pasta2, "teste.csv");
             ficheiro.createNewFile();
             FileWriter f = new FileWriter(ficheiro);
-            f.write("Tarefa " + tarefa + ": " + resultaddo);
+            f.write("Tarefa " + tarefa + ": " + resultado);
             f.close();
 
         }

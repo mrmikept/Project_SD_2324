@@ -1,15 +1,18 @@
 package Servidor;
 
+import Messages.Messagem;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
 
-public class Servidor implements Runnable{
+public class Servidor {
 
-    private HashMap<String, String> registados;
+    private ConcurrentHashMap<String, String> registados;
     private ServerSocket serverSocket;
     private Socket clientSocket;
     private ArrayList<Thread> threads;
@@ -64,14 +67,12 @@ public class Servidor implements Runnable{
     }
 
     public static void main(String[] args) {
-        Servidor sv = new Servidor();
-        int teste = 500;
-       // byte[] bytes =
+        //Servidor sv = new Servidor();
+        //int teste = 500;
+        // byte[] bytes =
         //sv.execJob();
-    }
 
-    @Override
-    public void run() {
+
 
     }
 }

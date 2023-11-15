@@ -1,12 +1,12 @@
 package Cliente;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.util.Scanner;
 
 public class Cliente {
-
-    public static void main(String[] args) throws Exception {
-
-    }
 
     public void registo() {
         System.out.println("Insere user:");
@@ -34,7 +34,26 @@ public class Cliente {
     }
 
 
+    public static void main(String[] args)
+    {
+        try
+        {
+            String serverAddr = "localhost";
+            int port = 8080;
 
+            Socket socket = new Socket(serverAddr,port);
+
+            BufferedReader socket_in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter socket_out = new PrintWriter(socket.getOutputStream());
+
+
+
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
 
 
 }
