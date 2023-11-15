@@ -14,15 +14,13 @@ public class Servidor {
 
     private ConcurrentHashMap<String, String> registados;
     private ServerSocket serverSocket;
-    private Socket clientSocket;
     private ArrayList<Thread> threads;
     private PriorityBlockingQueue<Messagem> queue; // Ler melhor sobre isto
 
     //queue com jobs e o utilizador que os pediu
 
-    public Servidor()
-    {
-        this.registados = new HashMap<>();
+    public Servidor() throws IOException {
+        this.registados = new ConcurrentHashMap<>();
         this.threads = new ArrayList<>();
         this.queue = new PriorityBlockingQueue<>();
     }
@@ -66,13 +64,25 @@ public class Servidor {
         }
     }
 
-    public static void main(String[] args) {
-        //Servidor sv = new Servidor();
-        //int teste = 500;
-        // byte[] bytes =
-        //sv.execJob();
+    public static void main(String[] args) throws IOException {
+        Servidor servidor = new Servidor();
+
+        ServerSocket ss = new ServerSocket(8080);
+        System.out.println("Socket ativo na porta: " + ss.getLocalPort());
+
+        ArrayList<Thread> threads = new ArrayList<>();
+
+        while (true)
+        {
+            Socket socket = ss.accept();
+            System.out.println("Nova conexão, a lançar uma thread...");
+            Thread thread = new Thread(new ConnectionHandler(servidor, socket));
+            thread.start();
+            System.out.println("Thread iniciada!");
+            threads.add(thread);
 
 
+        }
 
     }
 }
