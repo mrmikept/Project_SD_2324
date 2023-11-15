@@ -7,41 +7,29 @@ import java.net.Socket;
 import java.util.Scanner;
 
 public class Cliente {
+    private String email;
+    private String pass;
+    private Socket socket;
 
-    public void registo() {
-        System.out.println("Insere user:");
-        Scanner scanner = new Scanner(System. in);
-        String email = scanner. nextLine();
-        System.out.println("Insere password:");
-        scanner = new Scanner(System. in);
-        String password = scanner.nextLine();
-        // Envia a nova conta!
+
+    public boolean registo() {
+        //fazer registo com o server primeiro
+        return true;
     }
 
-    public void login() {
-        int i = 1;
-        while (i==1) {
-            System.out.println("Insere user:");
-            Scanner scanner = new Scanner(System.in);
-            String email = scanner.nextLine();
-            System.out.println("Insere password:");
-            scanner = new Scanner(System.in);
-            String password = scanner.nextLine();
-            // Servidor.Servidor verifica
-            // Caso esteja correto retorna 0
-            // E sai do ciclo
-        }
+    public boolean login() {
+        //fazer login primeiro
+
+        return true;
     }
 
-
-    public static void main(String[] args)
-    {
+    public void start_socket(){
         try
         {
             String serverAddr = "localhost";
             int port = 8080;
 
-            Socket socket = new Socket(serverAddr,port);
+            this.socket = new Socket(serverAddr,port);
 
             BufferedReader socket_in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             PrintWriter socket_out = new PrintWriter(socket.getOutputStream());
@@ -55,5 +43,11 @@ public class Cliente {
         }
     }
 
+    public void set_email(String email) {
+        this.email = email;
+    }
 
+    public void set_pass(String pass) {
+        this.pass = pass;
+    }
 }

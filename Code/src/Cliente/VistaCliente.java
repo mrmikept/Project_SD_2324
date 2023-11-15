@@ -4,13 +4,13 @@ import java.util.Scanner;
 
 public class VistaCliente
 {
+    ControladorCliente cc;
+    public void run(){
 
-    public void main(){
-
-        ControladorCliente cc = new ControladorCliente();
+        this.cc = new ControladorCliente();
 
         menuInicio();
-
+        MenuCliente();
     }
     public void menuInicio(){
 
@@ -24,21 +24,22 @@ public class VistaCliente
 
             if (x == 1 || x == 2){
                 System.out.println("Insira o seu email: ");
-                //cc.readEmail();
+                cc.read_email();
                 System.out.println("Introduza a sua password: ");
-                //cc.readPass();
+                cc.read_pass();
 
                 if (x == 1){
-                    //cc.login();
+                    if (!cc.cliente_login()) System.out.println("Login sem sucesso");
                 }
                 if (x == 2){
-                    //cc.registo();
+                    if (!cc.cliente_registo()) System.out.println("Registo sem sucesso");
                 }
             }
         }while (x != 0);
 
         if (x == 0){
             System.out.println("A fechar o programa...");
+            System.exit(0);
         }
     }
 
