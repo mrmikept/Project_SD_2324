@@ -1,10 +1,15 @@
+package Messages;
+
 import java.net.InetAddress;
 
 public class Messagem
 {
+    private static byte[] TOKEN = ";".getBytes();
+    private int id;
     InetAddress host;
-    byte[] messagem; //Get job list; ExecJob size; JobReport report;
-    int size;
+    byte[] messagem; //Get job list; ExecJob size; JobReport report; CreateAccout;<utilizador>;<palavrapasse>
+
+
 
     public Messagem(InetAddress host, byte[] messagem)
     {
