@@ -5,10 +5,12 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+//"/Users/luca/Desktop/LEI-UM/UM/3 ano/SD/Project_SD_2324/Code/src"
+
 public class Ficheiro {
 
 
-    public static void escreverResultado(int resultaddo ,String path, String user) throws IOException {
+    public static void escreverResultado(int tarefa, int resultaddo, String path) throws IOException {
 
         String pasta = Paths.get(path).toAbsolutePath().getParent().toString();
         String pasta2 = pasta + "/Resultados";
@@ -18,7 +20,7 @@ public class Ficheiro {
             File ficheiro = new File(pasta2, "teste.csv");
             ficheiro.createNewFile();
             FileWriter f = new FileWriter(ficheiro);
-            f.write(Integer.toString(resultaddo));
+            f.write("Tarefa " + tarefa + ": " + resultaddo);
             f.close();
         }
         else {
@@ -26,7 +28,7 @@ public class Ficheiro {
             File ficheiro = new File(pasta2, "teste.csv");
             ficheiro.createNewFile();
             FileWriter f = new FileWriter(ficheiro);
-            f.write(Integer.toString(resultaddo));
+            f.write("Tarefa " + tarefa + ": " + resultaddo);
             f.close();
 
         }
@@ -42,8 +44,7 @@ public class Ficheiro {
             File ficheiro = new File(pasta2, "teste2.csv");
             ficheiro.createNewFile();
             FileWriter f = new FileWriter(ficheiro);
-            f.write(Integer.toString(tarefa));
-            f.append(";" + mensagem);
+            f.write("Tarefa " + tarefa + ": (Erro) " + mensagem);
             f.close();
         }
         else {
@@ -51,8 +52,7 @@ public class Ficheiro {
             File ficheiro = new File(pasta2, "teste2.csv");
             ficheiro.createNewFile();
             FileWriter f = new FileWriter(ficheiro);
-            f.write(Integer.toString(tarefa));
-            f.append(";" + mensagem);
+            f.write("Tarefa " + tarefa + ": (Erro) " + mensagem);
             f.close();
 
         }
