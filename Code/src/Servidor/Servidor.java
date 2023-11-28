@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
 
@@ -80,8 +79,6 @@ public class Servidor {
             thread.start();
             System.out.println("Thread iniciada!");
             threads.add(thread);
-
-
         }
 
     }

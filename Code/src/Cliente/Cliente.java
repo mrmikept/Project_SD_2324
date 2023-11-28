@@ -6,7 +6,7 @@ public class Cliente {
         Sistema sistema = new Sistema();
         ControladorCliente controlador = new ControladorCliente(sistema);
         VistaCliente vista = new VistaCliente(controlador);
-
+        vista.menuInicio();
         vista.run();
     }
 

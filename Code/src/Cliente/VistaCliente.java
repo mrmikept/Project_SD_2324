@@ -17,13 +17,13 @@ public class VistaCliente
     public void menuInicio(){
 
         Scanner scanner = new Scanner(System.in);
-        int x = scanner.nextInt();
+        int x = 20;
 
         do {
             System.out.println("1- Inicie a Sessão");
             System.out.println("2- Registar Conta");
             System.out.println("0- Sair");
-
+            x = Integer.valueOf(cc.read_line());
             if (x == 1 || x == 2){
                 System.out.println("Insira o seu email: ");
                 String email = cc.read_line();
