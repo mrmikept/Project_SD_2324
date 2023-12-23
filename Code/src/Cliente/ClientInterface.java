@@ -1,7 +1,5 @@
 package Cliente;
 
-import java.util.Scanner;
-
 public class ClientInterface
 {
     public String startMenu()
@@ -16,8 +14,8 @@ public class ClientInterface
 
     public String clientMenu(String username)
     {
-        return "# Cloud Computing #" +
-                "Logged in account: " + username + "\n" +
+        return "# Cloud Computing #\n" +
+                "Logged in account: " + username + "\n\n" +
                 "1 - Job execution request\n" +
                 "2 - Job status\n" +
                 "3 - Service status\n" +

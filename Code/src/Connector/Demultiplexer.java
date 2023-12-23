@@ -60,11 +60,11 @@ public class Demultiplexer implements Runnable
             typeWaiter.addWaiter();
             while (true)
             {
-                if (!typeWaiter.messages.isEmpty())
+                if (!typeWaiter.isQueueEmpty())
                 {
-                    byte[] reply = typeWaiter.messages.poll();
+                    byte[] reply = typeWaiter.getMessage();
                     typeWaiter.removeWaiter();
-                    if (typeWaiter.waiters == 0 && typeWaiter.messages.isEmpty())
+                    if (typeWaiter.getWaiters() == 0 && typeWaiter.isQueueEmpty())
                     {
                         this.mapType.remove(type);
                     }
@@ -106,7 +106,7 @@ public class Demultiplexer implements Runnable
                     typeWaiters = new MessageTypeWaiters(this.lock);
                     this.mapType.put(message.getType(),typeWaiters);
                 }
-                typeWaiters.messages.add(message.getMessage());
+                typeWaiters.addMessage(message.getMessage());
                 typeWaiters.condition.signalAll();
             } finally {
                 this.lock.unlock();

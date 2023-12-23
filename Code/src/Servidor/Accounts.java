@@ -10,12 +10,14 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class Accounts
 {
+    private final String configPath;
     private Map<String, String> accounts; // Key -> Username; Value -> Password
     private ReentrantReadWriteLock.ReadLock readLock;
     private ReentrantReadWriteLock.WriteLock writeLock;
 
-    public Accounts()
+    public Accounts(String configPath)
     {
+        this.configPath = configPath;
         this.accounts = new HashMap<>();
         ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
         this.readLock = lock.readLock();
@@ -56,7 +58,7 @@ public class Accounts
     public void saveAccountFile(String username, String password)
     {
         try{
-            BufferedWriter writer = new BufferedWriter(new FileWriter("../serverConfig/accounts.txt",true));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(this.configPath + "/accounts.txt",true));
             writer.write(username + ";" + password + "\n");
             writer.flush();
             writer.close();

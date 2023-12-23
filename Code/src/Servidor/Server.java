@@ -2,6 +2,9 @@ package Servidor;
 
 import Connector.Message;
 
+import Worker.Job;
+import Worker.WorkerServer;
+import sd23.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -11,18 +14,18 @@ import java.util.concurrent.PriorityBlockingQueue;
 
 public class Server {
 
-    private static final String CONFIGPATH = "../serverConfig/";
+    private static final String CONFIGPATH = System.getProperty("user.home") + "/CloudServiceApp/serverConfig/";
     private Accounts accounts;
+    private WorkerServer workerServer;
     private ServerSocket serverSocket;
     private ArrayList<Thread> threads;
-    private PriorityBlockingQueue<Message> queue; // Ler melhor sobre isto, ACHO QUE NÃO PODEMOS USAR ISTOOO LOL
 
     //queue com jobs e o utilizador que os pediu
 
-    public Server() {
-        this.accounts = new Accounts();
+    public Server(int memory) {
+        this.accounts = new Accounts(CONFIGPATH);
         this.threads = new ArrayList<>();
-        this.queue = new PriorityBlockingQueue<>();
+        this.workerServer = new WorkerServer(memory);
     }
 
     public void startSocket(int port)
@@ -96,16 +99,42 @@ public class Server {
 
     public void start(int port) throws IOException, ClassNotFoundException {
         this.readConfig();
+        Thread worker = new Thread(this.workerServer);
+        worker.setName("Worker Server");
+        worker.start();
         this.startSocket(port);
+    }
+
+    public void addJobtoExecute(Job job)
+    {
+        System.out.println("Adding a job to execute!");
+        this.workerServer.addPendingJob(job);
+    }
+
+    public byte[] getJobResponse(Job job)
+    {
+        return this.workerServer.fetchCompletedJob(job);
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         int port = 9090;
-        if (args.length == 1)
+        int memory = 1000;
+        if (args.length < 1)
         {
-            port = Integer.parseInt(args[0]);
+            System.out.println("Few arguments, insert the memory size of the worker server and optionaly the port used in the TCP Connection!");
+            System.out.println("Aborting Program...");
+            return;
         }
-        Server server = new Server();
+        else
+        {
+            if (args.length > 1)
+            {
+                port = Integer.parseInt(args[1]);
+            }
+            memory = Integer.parseInt(args[0]);
+        }
+
+        Server server = new Server(memory);
         server.start(port);
 
     }

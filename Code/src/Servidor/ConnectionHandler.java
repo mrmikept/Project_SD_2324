@@ -1,6 +1,8 @@
 package Servidor;
 
 import Connector.*;
+import Worker.Job;
+import Worker.SingleWorker;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -15,22 +17,25 @@ public class ConnectionHandler implements Runnable
     private Connector connector;
     private boolean isLoggedIn;
 
-    public ConnectionHandler(Server server, Socket socket) throws IOException {
+    public ConnectionHandler(Server server, Socket socket) throws IOException
+    {
         this.server = server;
         this.socket = socket;
         this.connector = new Connector(this.socket);
         this.isLoggedIn = false;
     }
 
-    @Override
-    public void run()
+    public boolean logOutHandle()
     {
-        do
-        {
+        do {
             String[] strings;
             Message message = this.connector.receive();
-            if (message == null) break;
+            if (message == null) return false;
             int type = message.getType();
+            if (type > 2)
+            {
+                this.connector.send(message.getId(),Message.ERROR,message.getUser(),"Not logged in".getBytes());
+            }
             switch (type)
             {
                 case 1: // Create Account
@@ -44,7 +49,7 @@ public class ConnectionHandler implements Runnable
                     else
                     {
                         System.out.println("Failed registering user, account with username \"" + strings[0] + "\" already exits!" );
-                        this.connector.send(message.getId(),message.getType(),message.getUser(),"Failed;The Account already exits!".getBytes());
+                        this.connector.send(message.getId(),message.getType(),message.getUser(), "Failed;The Account already exits!".getBytes());
                     }
                     break;
                 case 2: // Autentication
@@ -54,20 +59,46 @@ public class ConnectionHandler implements Runnable
                     if (flag == 0)
                     {
                         System.out.println("Authentication sucessfull in account with username: \"" + strings[0] + "\"");
-                        this.connector.send(message.getId(),message.getType(),message.getUser(),"Sucess".getBytes());
+                        this.connector.send(message.getId(),message.getType(),message.getUser(), "Sucess".getBytes());
                         this.isLoggedIn = true;
                     } else if (flag == 1)
                     {
                         System.out.println("Authentication failed in account with username: \"" + strings[0] + "\", wrong password");
-                        this.connector.send(message.getId(),message.getType(),message.getUser(),"Failed;Wrong Password".getBytes());
+                        this.connector.send(message.getId(),message.getType(),message.getUser(), "Failed;Wrong Password".getBytes());
                     } else
                     {
-                        System.out.println("Authentication failed in account with username: \"" + strings[0] + "\", wrong username/password");
-                        this.connector.send(message.getId(),message.getType(),message.getUser(),"Failed;Wrong Username and/or Password.".getBytes());
+                        System.out.println("Authentication failed in account with username: \"" + strings[0] + "\", account not registered!");
+                        this.connector.send(message.getId(),message.getType(),message.getUser(), "Failed;Account not registered.".getBytes());
                     }
                     break;
+            }
+        } while (!this.isLoggedIn);
+        return true;
+    }
+
+    public boolean loggedInHandle()
+    {
+        do {
+            String[] strings;
+            Message message = this.connector.receive();
+            if (message == null) break;
+            int type = message.getType();
+            switch (type)
+            {
                 case 3: // Job Request
-                    // Do Somehting here
+                    System.out.println("Received a job request from user " + message.getUser());
+                    Job job = new Job();
+                    job.deserialize(message.getMessage());
+                    if (job.getId() != -1)
+                    {
+                        this.server.addJobtoExecute(job);
+                        new Thread(() -> {
+                            byte[] response = this.server.getJobResponse(job);
+                            Job result = new Job(job.getId(), job.getUser(), response, 0);
+                            this.connector.send(message.getId(),Message.JOBRESULT,message.getUser(),result.serialize());
+                            System.out.println("Response of Job " + job.getId() + " from user " + job.getUser() + " sent sucessfully!");
+                        }).start(); // TODO Maybe saving this thread????
+                    } else System.out.println("Something went wrong serializing Job object");
                     break;
                 case 4: // Job status
                     // Do Something here
@@ -75,11 +106,32 @@ public class ConnectionHandler implements Runnable
                 case 5: // Job list
                     // Do Something here
                     break;
-                case 6: // Close Connection
+                case 6: // Logout
+                    this.isLoggedIn = false;
+                    this.connector.send(message.getId(),Message.logOut,message.getUser(),"Sucess".getBytes());
+                    System.out.println("User " + message.getUser() + " logged out.");
+                    break;
+                case 10: // Close Connection
                     // Do something here;
                     break;
             }
-        } while (true);
+        } while (this.isLoggedIn);
+        return true;
+    }
+
+    @Override
+    public void run()
+    {
+        boolean connection = true;
+        do
+        {
+            connection = logOutHandle();
+            if (!connection)
+            {
+                break;
+            }
+            connection = loggedInHandle();
+        } while (connection);
         System.out.println("Connection closed!");
         this.isLoggedIn = false;
         try {
