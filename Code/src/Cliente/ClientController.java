@@ -29,7 +29,7 @@ public class ClientController
         return string.matches("\\d+");
     }
 
-    public int startMenu() throws IOException {
+    public int startMenu() throws IOException, InterruptedException {
         int option = 0;
         String username, password, response;
         BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
@@ -88,6 +88,7 @@ public class ClientController
                         break;
                     case 3: // Exit case
                         System.out.println("Exiting Program...");
+                        this.system.close();
                         return -1;
                 }
             } while (option != 10);
@@ -167,7 +168,6 @@ public class ClientController
                     }
                     System.out.println("\nPlease insert the total amout of memory required for this job: ");
                     in = input.readLine();
-                    System.out.println("in: " + in);
                     if (!this.isDigit(in))
                     {
                         System.out.println("\nPlease insert a number value\n");

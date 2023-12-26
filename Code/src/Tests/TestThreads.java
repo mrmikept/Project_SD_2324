@@ -7,6 +7,7 @@ import Worker.Job;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Random;
 
 public class TestThreads implements Runnable
 {
@@ -27,11 +28,14 @@ public class TestThreads implements Runnable
         String login = clientSystem.login(username,"1234");
         if (!login.startsWith("Failed;"))
         {
+            Random r = new Random();
             try {
                 byte[] jobCode = Files.readAllBytes(Path.of("/home/mikep/CloudServiceApp/ClientJobs/mikep/jobCodes",filename));
                 for (int i = 0; i < 10; i++)
                 {
-                    clientSystem.jobExecRequest(i,jobCode,200);
+                    int memory = r.nextInt(999) + 1;
+                    clientSystem.jobExecRequest(i,jobCode,memory);
+                    System.out.println("Sent job " + i + " of " + this.username + " memory " + memory);
                 }
                 for (int i = 0; i < 10; i++)
                 {

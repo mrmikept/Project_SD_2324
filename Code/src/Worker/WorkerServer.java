@@ -18,7 +18,7 @@ public class WorkerServer implements Runnable
 
     public WorkerServer(int memory)
     {
-        this.pendingJobs = new ArrayDeque<>();
+        this.pendingJobs = new PriorityQueue<>();
         this.completedJobs = new HashMap<>();
         this.completedJobLock = new ReentrantLock();
         this.totalMemory = memory;
@@ -106,6 +106,7 @@ public class WorkerServer implements Runnable
             jobWaiters.addJob(job.getId(),result,flag);
             this.memoryLock.lock();
             try {
+                System.out.println("###### Done job " + job.getId() + " of user " + job.getUser() + " used memory " + this.getUsedMemory());
                 this.removeMemory(job.getMemory());
                 this.memoryCondition.signalAll(); // Signal Thread that waits for free memory to use
             } finally {
@@ -164,6 +165,7 @@ public class WorkerServer implements Runnable
     {
         System.out.println("Creating thread to execute job");
         this.addMemory(job.getMemory());
+        System.out.println("##### Executing job " + job.getId() + " of user " + job.getUser() + "total memory used " + this.getUsedMemory());
         Thread worker = new Thread(new SingleWorker(this, job));
         worker.setName("Worker for job " + job.getId() + " from user " + job.getUser());
         worker.start();

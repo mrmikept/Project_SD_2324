@@ -1,15 +1,17 @@
 package Worker;
 
 import java.io.*;
+import java.time.LocalDateTime;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class Job implements Serializable
+public class Job implements Serializable, Comparable<Job>
 {
     private int id; // Job identifier
     private String user; // User who requested the execution of the Job
     private byte[] jobCode; // Job code to be executed
     private int memory; // Necessary Memory for the job execution
+    private LocalDateTime timeStamp;
     private ReentrantLock jobLock;
     private Condition condition;
 
@@ -18,6 +20,7 @@ public class Job implements Serializable
         this.id = -1;
         this.user = "";
         this.jobCode = null;
+        this.timeStamp = LocalDateTime.now();
         this.memory = 0;
     }
     public Job(int id, String user, byte[] jobCode, int memory) {
@@ -26,6 +29,7 @@ public class Job implements Serializable
         this.jobCode = jobCode;
         this.memory = memory;
         this.jobLock = new ReentrantLock();
+        this.timeStamp = LocalDateTime.now();
         this.condition = this.jobLock.newCondition();
     }
 
@@ -59,6 +63,11 @@ public class Job implements Serializable
 
     public void setMemory(int memory) {
         this.memory = memory;
+    }
+
+    public LocalDateTime getTimeStamp()
+    {
+        return this.timeStamp;
     }
 
     public byte[] serialize() {
@@ -108,4 +117,16 @@ public class Job implements Serializable
 
     }
 
+    @Override
+    public int compareTo(Job o) {
+        int memoryDiff = Integer.compare(this.getMemory(),o.getMemory());
+        if (memoryDiff > 0)
+        {
+            if (this.getTimeStamp().plusMinutes(2).isBefore(o.getTimeStamp()))
+            {
+                return -1;
+            } else return 1;
+        }
+        return -1;
+    }
 }
