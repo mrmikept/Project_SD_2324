@@ -107,13 +107,19 @@ public class Server {
 
     public void addJobtoExecute(Job job)
     {
-        System.out.println("Adding a job to execute!");
         this.workerServer.addPendingJob(job);
     }
 
-    public byte[] getJobResponse(Job job)
+    public Job getJobResponse(Job job)
     {
         return this.workerServer.fetchCompletedJob(job);
+    }
+
+    public String getServiceStatus()
+    {
+        int memory = this.workerServer.getTotalMemory() - this.workerServer.getUsedMemory();
+        int pending = this.workerServer.getNumberOfPendingJobs();
+        return memory + ";" + pending;
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {

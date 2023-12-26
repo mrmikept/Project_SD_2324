@@ -8,13 +8,15 @@ import java.util.concurrent.locks.ReentrantLock;
 public class CompJobWaiters
 {
     private int waiters;
-    private Map<Integer, byte[]> completed;
+    private Map<Integer, Job> completed;
+    private String user;
     public Condition condition;
 
-    public CompJobWaiters(ReentrantLock lock)
+    public CompJobWaiters(ReentrantLock lock, String user)
     {
         this.waiters = 0;
         this.completed = new HashMap<>();
+        this.user = user;
         this.condition = lock.newCondition();
     }
 
@@ -28,12 +30,12 @@ public class CompJobWaiters
         this.waiters--;
     }
 
-    public void addJob(int jobId, byte[] jobResult)
+    public void addJob(int jobId, byte[] jobResult, int result)
     {
-        this.completed.put(jobId,jobResult);
+        this.completed.put(jobId,new Job(jobId, this.user, jobResult, result));
     }
 
-    public byte[] getJobResult(int jobId)
+    public Job getJobResult(int jobId)
     {
         return this.completed.remove(jobId);
     }

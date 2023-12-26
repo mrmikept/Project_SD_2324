@@ -1,12 +1,8 @@
 package Worker;
 
-import java.util.ArrayDeque;
-import java.util.HashMap;
-import java.util.Queue;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import sd23.*;
 
 public class WorkerServer implements Runnable
 {
@@ -16,7 +12,7 @@ public class WorkerServer implements Runnable
     private Condition pendingCondition; // Condition for the pending execution queue
     private Map<String, CompJobWaiters> completedJobs; // Key -> Username; Value -> CompJobWaiters
     private ReentrantLock completedJobLock; // Lock for the completedJob map
-    private Condition completedCondition; // Condition for the completeJobs Map
+    private Condition memoryCondition; // Condition for the completeJobs Map
     private int usedMemory; // Used memory
     private ReentrantLock memoryLock;
 
@@ -25,12 +21,12 @@ public class WorkerServer implements Runnable
         this.pendingJobs = new ArrayDeque<>();
         this.completedJobs = new HashMap<>();
         this.completedJobLock = new ReentrantLock();
-        this.completedCondition = this.completedJobLock.newCondition();
         this.totalMemory = memory;
         this.usedMemory = 0;
         this.pendingLock = new ReentrantLock();
         this.pendingCondition = this.pendingLock.newCondition();
         this.memoryLock = new ReentrantLock();
+        this.memoryCondition = this.memoryLock.newCondition();
     }
 
     /**
@@ -84,10 +80,8 @@ public class WorkerServer implements Runnable
         this.pendingLock.lock();
         try
         {
-            System.out.println("Jog added");
             this.pendingJobs.add(job);
             this.pendingCondition.signalAll();
-            System.out.println("Signaled");
         } finally {
             this.pendingLock.unlock();
         }
@@ -98,7 +92,7 @@ public class WorkerServer implements Runnable
      * @param job Job that was executed
      * @param result Result of the job
      */
-    public void addCompletedJob(Job job, byte[] result)
+    public void addCompletedJob(Job job, byte[] result, int flag)
     {
         this.completedJobLock.lock();
         try
@@ -106,16 +100,16 @@ public class WorkerServer implements Runnable
             CompJobWaiters jobWaiters = this.completedJobs.get(job.getUser());
             if (jobWaiters == null)
             {
-                jobWaiters = new CompJobWaiters(this.completedJobLock);
+                jobWaiters = new CompJobWaiters(this.completedJobLock, job.getUser());
                 this.completedJobs.put(job.getUser(),jobWaiters);
             }
-            jobWaiters.addJob(job.getId(),result);
-            this.pendingLock.lock();
+            jobWaiters.addJob(job.getId(),result,flag);
+            this.memoryLock.lock();
             try {
                 this.removeMemory(job.getMemory());
-                this.completedCondition.signalAll(); // Signal Thread that waits for memory to use
+                this.memoryCondition.signalAll(); // Signal Thread that waits for free memory to use
             } finally {
-                this.pendingLock.unlock();
+                this.memoryLock.unlock();
             }
             jobWaiters.condition.signalAll(); // Signal all the threads waiting for the completiong for a job from a certain user
         } finally {
@@ -128,7 +122,7 @@ public class WorkerServer implements Runnable
      * @param job Job to execute
      * @return byte array with the job result
      */
-    public byte[] fetchCompletedJob(Job job)
+    public Job fetchCompletedJob(Job job)
     {
         this.completedJobLock.lock();
         try {
@@ -136,14 +130,14 @@ public class WorkerServer implements Runnable
 
             if (jobWaiters == null)
             {
-                jobWaiters = new CompJobWaiters(this.completedJobLock);
+                jobWaiters = new CompJobWaiters(this.completedJobLock, job.getUser());
                 this.completedJobs.put(job.getUser(),jobWaiters);
             }
             jobWaiters.addWaiter();
 
             while (true)
             {
-                byte[] result = jobWaiters.getJobResult(job.getId());
+                Job result = jobWaiters.getJobResult(job.getId());
                 if (result != null)
                 {
                     jobWaiters.removeWaiter();
@@ -175,6 +169,21 @@ public class WorkerServer implements Runnable
         worker.start();
     }
 
+    public int getNumberOfPendingJobs()
+    {
+        this.pendingLock.lock();
+        try {
+            return this.pendingJobs.size();
+        } finally {
+            this.pendingLock.unlock();
+        }
+    }
+
+    public int getTotalMemory()
+    {
+        return this.totalMemory;
+    }
+
     /**
      * Run function that selects a job to be executed from the pending job's queue. Also verifies if the memory of the job don't pass the total memory of the server, if yes then waits
      */
@@ -199,17 +208,22 @@ public class WorkerServer implements Runnable
                 job = this.pendingJobs.poll();
             } finally {
                 this.pendingLock.unlock();
-            }
-            while (this.getUsedMemory() + job.getMemory() >= this.totalMemory)
-            {
-                try {
-                    System.out.println("Waiting for free memory");
-                    this.completedCondition.await(); // Waits for memory
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+            } // TODO usar metodo peek na queue de forma a que só seja verificada a memoria do job sem o remover da fila?????
+            this.memoryLock.lock();
+            try {
+                while (this.getUsedMemory() + job.getMemory() > this.totalMemory)
+                {
+                    try {
+                        System.out.println("Waiting for free memory");
+                        this.memoryCondition.await(); // Waits for memory
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
+                this.execJob(job);
+            } finally {
+                this.memoryLock.unlock();
             }
-            this.execJob(job);
         }
     }
 }

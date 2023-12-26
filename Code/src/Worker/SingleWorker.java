@@ -6,6 +6,7 @@ public class SingleWorker implements Runnable
 {
     WorkerServer server;
     Job job;
+    int result;
 
     public SingleWorker(WorkerServer server, Job job)
     {
@@ -24,10 +25,12 @@ public class SingleWorker implements Runnable
         {
             System.out.println("Executing job " + this.job.getId() + " from user " + job.getUser());
             byte[] output = JobFunction.execute(this.job.getJobCode());
+            this.result = 0;
             System.out.println("Sucess executing job " + this.job.getId() + " from user " + this.job.getUser() + ": returned " + output.length + " bytes.");
             return output;
         } catch (JobFunctionException e)
         {
+            this.result = -1;
             System.out.println("Failed executing job " + this.job.getId() + " from user " + this.job.getUser() + ": returned code " + e.getCode() + " message: " + e.getMessage());
             return ("Failed;" + e.getCode() + ";" + e.getMessage()).getBytes();
         }
@@ -36,6 +39,6 @@ public class SingleWorker implements Runnable
     public void run()
     {
         byte[] response = this.execJob();
-        this.server.addCompletedJob(this.job,response);
+        this.server.addCompletedJob(this.job,response, this.result);
     }
 }

@@ -1,8 +1,6 @@
 package Connector;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -18,8 +16,8 @@ public class Connector
 
     public Connector(Socket socket) throws IOException
     {
-        this.inputStream = new DataInputStream(socket.getInputStream());
-        this.outputStream = new DataOutputStream(socket.getOutputStream());
+        this.inputStream = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
+        this.outputStream = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
         this.readLock = new ReentrantLock();
         this.writeLock = new ReentrantLock();
     }

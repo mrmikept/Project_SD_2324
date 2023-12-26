@@ -9,6 +9,7 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.List;
 
 public class ClientController
 {
@@ -50,7 +51,7 @@ public class ClientController
                             break;
                         }
                     case 1: // Login case
-                        System.out.println("\n\n# Login Menu #\n\n");
+                        System.out.println("\n# Login Menu #\n");
                         System.out.println("Insert the username of the Account: ");
                         username = input.readLine();
                         System.out.println("\nInsert the password of the Account: ");
@@ -65,22 +66,22 @@ public class ClientController
                             break;
                         } else {
                             this.username = username;
-                            System.out.println("\n" + response);
-                            System.out.println("\nPress any key to go back.");
+                            System.out.println("\n" + response + " logging in!");
+                            System.out.println("\nPress any key to continue.");
                             input.readLine();
                             option = 10;
                             break;
                         }
                     case 2: // Register case
-                        System.out.println("\n\n# Register an Account #\n\n");
-                        System.out.println("\nInsert the username for the new Account: ");
+                        System.out.println("\n# Register an Account #\n");
+                        System.out.println("Insert the username for the new Account: ");
                         username = input.readLine();
                         System.out.println("\nInsert the password for the new Account: ");
                         password = input.readLine();
 
                         response = this.system.register(username, password);
 
-                        System.out.println("\n" + response);
+                        System.out.println("\n" + response + "!");
                         System.out.println("\nPress any key to go back.");
                         input.readLine();
                         option = 0;
@@ -95,6 +96,7 @@ public class ClientController
     }
 
     public void clientMenu() throws IOException {
+        this.createJobsFolder();
         int option = 0;
         CodeGen mycodes = new CodeGen();
         BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
@@ -125,7 +127,7 @@ public class ClientController
                     }
                     this.saveJobResult(result);
                 }
-            } while (true);
+            } while (this.system.isLoggedIn());
         });
         completedJobNotificatorAndWriter.start();
         do {
@@ -185,10 +187,30 @@ public class ClientController
                     option = 0;
                     break;
                 case 2: // Jobs status
-
+                    List<String> list = this.system.getJobStatus();
+                    System.out.println("# Job Status #\n");
+                    if (list.size() > 0)
+                    {
+                        for (String str : list)
+                        {
+                            System.out.println(str);
+                        }
+                    }
+                    else
+                    {
+                        System.out.println("No job requests found!\n");
+                    }
+                    System.out.println("Press any key to go back.");
+                    input.readLine();
+                    option = 0;
                     break;
                 case 3: // Service status
-
+                    String info = this.system.RequestServiceStatus();
+                    System.out.println("# Service Status #\n");
+                    System.out.println(info);
+                    System.out.println("\nPress any key to go back.");
+                    input.readLine();
+                    option = 0;
                     break;
                 case 4: // Logout
                     System.out.println("Logging out...");
@@ -211,14 +233,14 @@ public class ClientController
 
     public void createJobsFolder()
     {
-        File folder = new File(JOBSFOLDER);
+        File folder = new File(JOBSFOLDER + this.username);
         if (!folder.exists())
         {
-            if ((new File(JOBSFOLDER + "/jobCodes/").mkdirs()))
+            if ((new File(JOBSFOLDER + this.username + "/jobCodes/").mkdirs()))
             {
                 System.out.println("Created folder for job Codes!");
             }
-            if ((new File(JOBSFOLDER + "/jobResults/").mkdirs()))
+            if ((new File(JOBSFOLDER + this.username + "/jobResults/").mkdirs()))
             {
                 System.out.println("Created folder to write job results!");
             }
@@ -229,7 +251,7 @@ public class ClientController
     {
         try
         {
-            return Files.readAllBytes(Path.of(JOBSFOLDER,"jobCodes",filename));
+            return Files.readAllBytes(Path.of(JOBSFOLDER,this.username,"jobCodes",filename));
         } catch (IOException e)
         {
             e.printStackTrace();
@@ -242,7 +264,7 @@ public class ClientController
     {
         try
         {
-            Files.write(Path.of(JOBSFOLDER,"jobResults","job " + job.getId() + "result"),job.getJobCode());
+            Files.write(Path.of(JOBSFOLDER,this.username,"jobResults","job " + job.getId() + "- Result"),job.getJobCode());
         } catch (IOException e)
         {
             System.out.println("Failed writing job result: " + e.getMessage());
@@ -250,7 +272,6 @@ public class ClientController
     }
 
     public void run() throws IOException, InterruptedException {
-        this.createJobsFolder();
         int flag = 1;
         do {
             switch (flag)

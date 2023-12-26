@@ -64,8 +64,8 @@ public class ClientSystem {
     {
         if (this.isLoggedin)
         {
-            this.demultiplexer.send("logout",Message.logOut,this.username,"Logging out".getBytes());
-            byte[] bytes = this.demultiplexer.receive(Message.logOut);
+            this.demultiplexer.send("logout",Message.LOGOUT,this.username,"Logging out".getBytes());
+            byte[] bytes = this.demultiplexer.receive(Message.LOGOUT);
             String message = new String(bytes);
             if (message.equals("Sucess"))
             {
@@ -103,14 +103,19 @@ public class ClientSystem {
 
     public void jobExecRequest(int jobId, byte[] jobCode, int memoryNedded)
     {
+        this.saveJobResult(jobId,null);
+        Job job = new Job(jobId, this.username, jobCode, memoryNedded);
+        this.demultiplexer.send(String.valueOf(jobId),Message.JOBREQUEST,this.username, job.serialize());
+    }
+
+    public void saveJobResult(int jobID, Job job)
+    {
         this.jobsMapLock.lock();
         try {
-            this.jobsResult.put(jobId,null);
+            this.jobsResult.put(jobID,job);
         } finally {
             this.jobsMapLock.unlock();
         }
-        Job job = new Job(jobId, this.username, jobCode, memoryNedded);
-        this.demultiplexer.send(String.valueOf(jobId),Message.JOBREQUEST,this.username, job.serialize());
     }
 
     public Job waitJobResult()
@@ -118,13 +123,46 @@ public class ClientSystem {
         byte[] data = this.demultiplexer.receive(Message.JOBRESULT);
         Job result = new Job();
         result.deserialize(data);
+        this.saveJobResult(result.getId(),result);
+        return result;
+    }
+
+    public Map<Integer, Job> getJobsResultMap()
+    {
         this.jobsMapLock.lock();
-        try {
-            this.jobsResult.put(result.getId(),result);
+        try
+        {
+            return new HashMap<>(this.jobsResult);
         } finally {
             this.jobsMapLock.unlock();
         }
-        return result;
+    }
+
+    public List<String> getJobStatus() {
+        List<String> list = new ArrayList<>();
+        Map<Integer, Job> map = this.getJobsResultMap();
+
+        for (int i = 1; i < map.size() + 1; i++) {
+            Job job = map.get(i);
+            if (job == null) {
+                list.add("Job " + i + ": Waiting execution Result.");
+            } else if (job.getMemory() != -1) {
+                list.add("Job " + i + ": Sucess executing job, received response with " + job.getJobCode().length + " bytes.");
+            } else {
+                String[] strings = new String(job.getJobCode()).split(";");
+                list.add("Job " + i + ": Failed executing job, Error Code: " + strings[1] + "; Message: " + strings[2]);
+            }
+        }
+        return list;
+
+    }
+
+    public String RequestServiceStatus()
+    {
+        this.demultiplexer.send("Status",Message.SERVICESTATUS,this.username,"status".getBytes());
+        byte[] data = this.demultiplexer.receive(Message.SERVICESTATUS);
+        String[] strings = new String(data).split(";");
+        return "Available Memory: " + strings[0] + "; Number of pending jobs: " + strings[1];
     }
 
     public boolean isLoggedIn()

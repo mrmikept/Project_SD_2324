@@ -9,8 +9,8 @@ public class Message
     public final static int AUTENTICATION= 2;
     public final static int  JOBREQUEST= 3;
     public final static int  JOBRESULT = 4;
-    public final static int  JOBLIST = 5;
-    public final static int logOut = 6;
+    public final static int  SERVICESTATUS = 5;
+    public final static int LOGOUT = 6;
     public final static int  CLOSECONNECTION = 10;
     public final static int ERROR = 99;
 

@@ -2,7 +2,6 @@ package Servidor;
 
 import Connector.*;
 import Worker.Job;
-import Worker.SingleWorker;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -93,9 +92,8 @@ public class ConnectionHandler implements Runnable
                     {
                         this.server.addJobtoExecute(job);
                         new Thread(() -> {
-                            byte[] response = this.server.getJobResponse(job);
-                            Job result = new Job(job.getId(), job.getUser(), response, 0);
-                            this.connector.send(message.getId(),Message.JOBRESULT,message.getUser(),result.serialize());
+                            Job response = this.server.getJobResponse(job);
+                            this.connector.send(message.getId(),Message.JOBRESULT,message.getUser(), response.serialize());
                             System.out.println("Response of Job " + job.getId() + " from user " + job.getUser() + " sent sucessfully!");
                         }).start(); // TODO Maybe saving this thread????
                     } else System.out.println("Something went wrong serializing Job object");
@@ -103,12 +101,13 @@ public class ConnectionHandler implements Runnable
                 case 4: // Job status
                     // Do Something here
                     break;
-                case 5: // Job list
-                    // Do Something here
+                case 5: // Service status
+                    System.out.println("Received a service status request from user " + message.getUser());
+                    this.connector.send(message.getId(),Message.SERVICESTATUS,message.getUser(),this.server.getServiceStatus().getBytes());
                     break;
                 case 6: // Logout
                     this.isLoggedIn = false;
-                    this.connector.send(message.getId(),Message.logOut,message.getUser(),"Sucess".getBytes());
+                    this.connector.send(message.getId(),Message.LOGOUT,message.getUser(),"Sucess".getBytes());
                     System.out.println("User " + message.getUser() + " logged out.");
                     break;
                 case 10: // Close Connection
