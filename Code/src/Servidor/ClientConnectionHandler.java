@@ -9,14 +9,14 @@ import java.net.Socket;
 /**
  * Class to handle the different types of Requests received from a client.
  */
-public class ConnectionHandler implements Runnable
+public class ClientConnectionHandler implements Runnable
 {
     private Server server;
     private Socket socket;
     private Connector connector;
     private boolean isLoggedIn;
 
-    public ConnectionHandler(Server server, Socket socket) throws IOException
+    public ClientConnectionHandler(Server server, Socket socket) throws IOException
     {
         this.server = server;
         this.socket = socket;
@@ -111,8 +111,7 @@ public class ConnectionHandler implements Runnable
                     System.out.println("User " + message.getUser() + " logged out.");
                     break;
                 case 10: // Close Connection
-                    // Do something here;
-                    break;
+                    return false;
             }
         } while (this.isLoggedIn);
         return true;

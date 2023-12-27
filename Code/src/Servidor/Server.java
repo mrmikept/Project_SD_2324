@@ -1,7 +1,6 @@
 package Servidor;
 
 import Worker.Job;
-import Worker.WorkerServer;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,7 +12,7 @@ public class Server {
 
     private static final String CONFIGPATH = System.getProperty("user.home") + "/CloudServiceApp/serverConfig/";
     private Accounts accounts;
-    private WorkerServer workerServer;
+    private JobManager jobManager;
     private ServerSocket serverSocket;
     private ArrayList<Thread> threads;
 
@@ -22,19 +21,37 @@ public class Server {
     public Server(int memory) {
         this.accounts = new Accounts(CONFIGPATH);
         this.threads = new ArrayList<>();
-        this.workerServer = new WorkerServer(memory);
+        this.jobManager = new JobManager();
     }
 
     public void startSocket(int port)
     {
+        Thread workerConnection = new Thread(() -> {
+            try {
+                ServerSocket workerSocket = new ServerSocket(8080);
+                System.out.println("Listening for workers connection at port " + workerSocket.getLocalPort());
+                while (true)
+                {
+                    Socket worker = workerSocket.accept();
+                    System.out.println("New Worker connected!");
+                    Thread thread = new Thread(new WorkerConnectionHandler(this,worker,this.jobManager));
+                    thread.start();
+                    this.threads.add(thread);
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        workerConnection.start();
+
         try{
-            this.serverSocket = new ServerSocket(port); // Cria um socket na porta 8080
+            this.serverSocket = new ServerSocket(port);
             System.out.println("Socket open at port: " + this.serverSocket.getLocalPort());
             while (true)
             {
                 Socket client = serverSocket.accept();
                 System.out.println("New client connection, creating new thread...");
-                Thread thread = new Thread(new ConnectionHandler(this,client));
+                Thread thread = new Thread(new ClientConnectionHandler(this,client));
                 this.threads.add(thread);
                 thread.start();
                 System.out.println("Thread started!");
@@ -96,27 +113,25 @@ public class Server {
 
     public void start(int port) throws IOException, ClassNotFoundException {
         this.readConfig();
-        Thread worker = new Thread(this.workerServer);
-        worker.setName("Worker Server");
-        worker.start();
         this.startSocket(port);
     }
 
     public void addJobtoExecute(Job job)
     {
-        this.workerServer.addPendingJob(job);
+        this.jobManager.addPendingJob(job);
     }
 
     public Job getJobResponse(Job job)
     {
-        return this.workerServer.fetchCompletedJob(job);
+        return this.jobManager.waitForJobCompletion(job);
     }
 
     public String getServiceStatus()
     {
-        int memory = this.workerServer.getTotalMemory() - this.workerServer.getUsedMemory();
-        int pending = this.workerServer.getNumberOfPendingJobs();
-        return memory + ";" + pending;
+//        int memory = this.workerServer.getTotalMemory() - this.workerServer.getUsedMemory();
+//        int pending = this.jobManager.countPendingJobs();
+//        return memory + ";" + pending;
+        return ":)";
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {

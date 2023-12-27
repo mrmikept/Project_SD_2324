@@ -39,6 +39,6 @@ public class JobExecutor implements Runnable
     public void run()
     {
         byte[] response = this.execJob();
-        this.worker.sendCompletedJob(new Job(this.job.getId(),this.job.getUser(),response,this.result));
+        this.worker.sendCompletedJob(new Job(this.job.getId(),this.job.getUser(),response,this.job.getMemory()));
     }
 }

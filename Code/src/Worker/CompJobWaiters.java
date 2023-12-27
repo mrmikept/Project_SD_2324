@@ -30,9 +30,9 @@ public class CompJobWaiters
         this.waiters--;
     }
 
-    public void addJob(int jobId, byte[] jobResult, int result)
+    public void addJob(Job job)
     {
-        this.completed.put(jobId,new Job(jobId, this.user, jobResult, result));
+        this.completed.put(job.getId(),job);
     }
 
     public Job getJobResult(int jobId)
