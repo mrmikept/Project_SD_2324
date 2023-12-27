@@ -106,8 +106,8 @@ public class WorkerServer implements Runnable
             jobWaiters.addJob(job.getId(),result,flag);
             this.memoryLock.lock();
             try {
-                System.out.println("###### Done job " + job.getId() + " of user " + job.getUser() + " used memory " + this.getUsedMemory());
                 this.removeMemory(job.getMemory());
+                System.out.println("###### Done job " + job.getId() + " of user " + job.getUser() + " used memory " + this.getUsedMemory());
                 this.memoryCondition.signalAll(); // Signal Thread that waits for free memory to use
             } finally {
                 this.memoryLock.unlock();
@@ -213,10 +213,10 @@ public class WorkerServer implements Runnable
             } // TODO usar metodo peek na queue de forma a que só seja verificada a memoria do job sem o remover da fila?????
             this.memoryLock.lock();
             try {
-                while (this.getUsedMemory() + job.getMemory() > this.totalMemory)
+                while (this.getUsedMemory() + job.getMemory() > this.getTotalMemory())
                 {
                     try {
-                        System.out.println("Waiting for free memory");
+                        System.out.println("Waiting for free memory, memory nedded: " + job.getMemory() + "; Memory Used: " + this.getUsedMemory());
                         this.memoryCondition.await(); // Waits for memory
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);

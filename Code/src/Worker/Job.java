@@ -89,7 +89,6 @@ public class Job implements Serializable, Comparable<Job>
             }
         } catch (IOException ignored)
         {
-
         }
         return null;
     }
@@ -114,7 +113,6 @@ public class Job implements Serializable, Comparable<Job>
         } catch (IOException ignored) {
 
         }
-
     }
 
     @Override
@@ -122,7 +120,7 @@ public class Job implements Serializable, Comparable<Job>
         int memoryDiff = Integer.compare(this.getMemory(),o.getMemory());
         if (memoryDiff > 0)
         {
-            if (this.getTimeStamp().plusMinutes(2).isBefore(o.getTimeStamp()))
+            if (this.getTimeStamp().plusSeconds(2).isBefore(o.getTimeStamp()))
             {
                 return -1;
             } else return 1;
