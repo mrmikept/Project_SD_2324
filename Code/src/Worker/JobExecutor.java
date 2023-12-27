@@ -2,15 +2,15 @@ package Worker;
 
 import sd23.*;
 
-public class SingleWorker implements Runnable
+public class JobExecutor implements Runnable
 {
-    WorkerServer server;
+    Worker worker;
     Job job;
     int result;
 
-    public SingleWorker(WorkerServer server, Job job)
+    public JobExecutor(Worker worker, Job job)
     {
-        this.server = server;
+        this.worker = worker;
         this.job = job;
     }
 
@@ -39,6 +39,6 @@ public class SingleWorker implements Runnable
     public void run()
     {
         byte[] response = this.execJob();
-        this.server.addCompletedJob(this.job,response, this.result);
+        this.worker.sendCompletedJob(new Job(this.job.getId(),this.job.getUser(),response,this.result));
     }
 }

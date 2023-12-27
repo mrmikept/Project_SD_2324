@@ -166,7 +166,7 @@ public class WorkerServer implements Runnable
         System.out.println("Creating thread to execute job");
         this.addMemory(job.getMemory());
         System.out.println("##### Executing job " + job.getId() + " of user " + job.getUser() + "total memory used " + this.getUsedMemory());
-        Thread worker = new Thread(new SingleWorker(this, job));
+        Thread worker = new Thread(new JobExecutor(this, job));
         worker.setName("Worker for job " + job.getId() + " from user " + job.getUser());
         worker.start();
     }
