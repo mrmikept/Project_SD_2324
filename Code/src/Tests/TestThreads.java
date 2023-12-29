@@ -34,6 +34,7 @@ public class TestThreads implements Runnable
                 for (int i = 0; i < 10; i++)
                 {
                     int memory = r.nextInt(999) + 1;
+//                    int memory = 100;
                     clientSystem.jobExecRequest(i,jobCode,memory);
                     System.out.println("Sent job " + i + " of " + this.username + " memory " + memory);
                 }

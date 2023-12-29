@@ -16,8 +16,6 @@ public class Server {
     private ServerSocket serverSocket;
     private ArrayList<Thread> threads;
 
-    //queue com jobs e o utilizador que os pediu
-
     public Server(int memory) {
         this.accounts = new Accounts(CONFIGPATH);
         this.threads = new ArrayList<>();
@@ -28,15 +26,20 @@ public class Server {
     {
         Thread workerConnection = new Thread(() -> {
             try {
+                int workers = 0;
                 ServerSocket workerSocket = new ServerSocket(8080);
                 System.out.println("Listening for workers connection at port " + workerSocket.getLocalPort());
                 while (true)
                 {
                     Socket worker = workerSocket.accept();
                     System.out.println("New Worker connected!");
-                    Thread thread = new Thread(new WorkerConnectionHandler(this,worker,this.jobManager));
+                    WorkerConnectionHandler workerConnector = new WorkerConnectionHandler(this,worker,this.jobManager,workers);
+                    Thread thread = new Thread(workerConnector);
+                    this.jobManager.addWorker(workerConnector);
                     thread.start();
                     this.threads.add(thread);
+                    workers++;
+
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -83,21 +86,6 @@ public class Server {
         } else return -1;
     }
 
-    //Importado do Example.java dado pelos professores
-//    public void execJob(byte[] tarefa) {
-//
-//        try {
-//            // executar a tarefa
-//
-//            byte[] output = sd23.JobFunction.execute(tarefa); //Output da tarefa
-//
-//            // utilizar o resultado ou reportar o erro
-//            System.err.println("success, returned "+output.length+" bytes");
-//        } catch (sd23.JobFunctionException e) {
-//            System.err.println("job failed: code="+e.getCode()+" message="+e.getMessage());
-//        }
-//    }
-
     public void readConfig() throws IOException, ClassNotFoundException {
         System.out.println("Reading configuration files...");
         File config = new File(CONFIGPATH);
@@ -113,6 +101,9 @@ public class Server {
 
     public void start(int port) throws IOException, ClassNotFoundException {
         this.readConfig();
+        Thread jobManager = new Thread(this.jobManager);
+        jobManager.setName("JobManagerThread");
+        jobManager.start();
         this.startSocket(port);
     }
 
@@ -121,17 +112,16 @@ public class Server {
         this.jobManager.addPendingJob(job);
     }
 
-    public Job getJobResponse(Job job)
+    public Job getUserJobResults(String user)
     {
-        return this.jobManager.waitForJobCompletion(job);
+        return this.jobManager.waitForJobCompletion(user);
     }
 
     public String getServiceStatus()
     {
-//        int memory = this.workerServer.getTotalMemory() - this.workerServer.getUsedMemory();
-//        int pending = this.jobManager.countPendingJobs();
-//        return memory + ";" + pending;
-        return ":)";
+        int memory = this.jobManager.getAvailableMemory();
+        int pending = this.jobManager.countPendingJobs();
+        return memory + ";" + pending;
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {

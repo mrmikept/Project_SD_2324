@@ -43,12 +43,14 @@ public class Worker
         try
         {
             this.connector.send("Worker", Message.MEMORYINFO,"Worker",String.valueOf(this.workerMemory).getBytes());
+            System.out.println("Memory sent to Central Server!");
         } finally {
             this.writeLock.unlock();
         }
     }
 
     public void start() throws IOException {
+        System.out.println("Starting Worker Server...");
         this.sendServerMemory();
         while (true)
         {

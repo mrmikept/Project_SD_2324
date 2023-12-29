@@ -11,7 +11,7 @@ public class Job implements Serializable, Comparable<Job>
     private String user; // User who requested the execution of the Job
     private byte[] jobCode; // Job code to be executed
     private int memory; // Necessary Memory for the job execution
-    private LocalDateTime timeStamp;
+    private int priority;
     private ReentrantLock jobLock;
     private Condition condition;
 
@@ -20,7 +20,7 @@ public class Job implements Serializable, Comparable<Job>
         this.id = -1;
         this.user = "";
         this.jobCode = null;
-        this.timeStamp = LocalDateTime.now();
+        this.priority = 0;
         this.memory = 0;
     }
     public Job(int id, String user, byte[] jobCode, int memory) {
@@ -29,7 +29,7 @@ public class Job implements Serializable, Comparable<Job>
         this.jobCode = jobCode;
         this.memory = memory;
         this.jobLock = new ReentrantLock();
-        this.timeStamp = LocalDateTime.now();
+        this.priority = 0;
         this.condition = this.jobLock.newCondition();
     }
 
@@ -65,9 +65,9 @@ public class Job implements Serializable, Comparable<Job>
         this.memory = memory;
     }
 
-    public LocalDateTime getTimeStamp()
+    public int getPriority()
     {
-        return this.timeStamp;
+        return this.priority;
     }
 
     public byte[] serialize() {
@@ -117,14 +117,19 @@ public class Job implements Serializable, Comparable<Job>
 
     @Override
     public int compareTo(Job o) {
-        int memoryDiff = Integer.compare(this.getMemory(),o.getMemory());
-        if (memoryDiff > 0)
-        {
-            if (this.getTimeStamp().plusSeconds(2).isBefore(o.getTimeStamp()))
-            {
-                return -1;
-            } else return 1;
+        if (this.getPriority() == 3) {
+            return 1;
         }
-        return -1;
+
+        int memoryDiff = Integer.compare(this.getMemory(), o.getMemory());
+
+        if (memoryDiff < 0) {
+            this.priority++;
+            return -1; // Job atual tem menor memória, então deve estar em primeiro na fila.
+        } else if (memoryDiff > 0) {
+            return 1; // Job atual tem maior memória, então deve estar em segundo na fila.
+        } else {
+            return 0; // Empate em memória, o Job atual e o Job comparado são considerados iguais.
+        }
     }
 }

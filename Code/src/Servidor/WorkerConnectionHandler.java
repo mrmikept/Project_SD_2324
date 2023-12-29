@@ -11,6 +11,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class WorkerConnectionHandler implements Runnable
 {
+    int id;
     Server server;
     JobManager jobManager;
     Socket socket;
@@ -18,9 +19,9 @@ public class WorkerConnectionHandler implements Runnable
     private int totalMemory;
     private int usedMemory;
     private ReentrantLock memoryLock;
-    private Condition memoryCondition;
 
-    public WorkerConnectionHandler(Server server, Socket socket, JobManager manager) throws IOException {
+    public WorkerConnectionHandler(Server server, Socket socket, JobManager manager, int id) throws IOException {
+        this.id = id;
         this.server = server;
         this.jobManager = manager;
         this.socket = socket;
@@ -28,7 +29,11 @@ public class WorkerConnectionHandler implements Runnable
         this.totalMemory = 0;
         this.usedMemory = 0;
         this.memoryLock = new ReentrantLock();
-        this.memoryCondition = this.memoryLock.newCondition();
+    }
+
+    public int getId()
+    {
+        return this.id;
     }
 
     private boolean receiveWorkerMemory()
@@ -51,7 +56,7 @@ public class WorkerConnectionHandler implements Runnable
     private void addCompletedJob(Job job)
     {
         this.removeMemory(job.getMemory());
-        this.jobManager.addCompletedJob(job);
+        this.jobManager.addCompletedJob(job, this.id);
     }
 
     private void addMemory(int memory)
@@ -71,7 +76,6 @@ public class WorkerConnectionHandler implements Runnable
         try
         {
             this.usedMemory -= memory;
-            this.memoryCondition.signalAll();
         } finally {
             this.memoryLock.unlock();
         }
@@ -96,39 +100,11 @@ public class WorkerConnectionHandler implements Runnable
     {
         this.addMemory(job.getMemory());
         this.connector.send(String.valueOf(job.getId()),Message.JOBREQUEST,"Server",job.serialize());
-        System.out.println("Job " + job.getId() + " of user " + job.getUser() + " was sent to be executed in Worker Server.");
-    }
-
-    public void test()
-    {
-        Thread jobSeeker = new Thread(() -> {
-            while (true) // TODO SOMETHING TO EXIT THIS
-            {
-                this.memoryLock.lock();
-                try {
-                    Job job = this.jobManager.getPendingJob(this.getTotalMemory() - this.getUsedMemory());
-                    while (job == null)
-                    {
-                        try {
-                            this.memoryCondition.await();
-                        } catch (InterruptedException e)
-                        {
-                            System.out.println(e.getMessage());
-                        }
-                        job = this.jobManager.getPendingJob(this.getTotalMemory() - this.getUsedMemory());
-                    }
-                    this.sendJobRequest(job);
-                } finally {
-                    this.memoryLock.unlock();
-                }
-            }
-        });
-        jobSeeker.start();
+        System.out.println("Job " + job.getId() + " of user " + job.getUser() + " (memory nedded: " + job.getMemory() +  ") was sent to be executed in Worker Server " + this.getId() + " memory used " + this.getUsedMemory() + " bytes, of " + this.getTotalMemory() + " bytes.");
     }
 
     public boolean handle()
     {
-        this.test();
         while (true)
         {
             Message message = this.connector.receive();
@@ -137,8 +113,7 @@ public class WorkerConnectionHandler implements Runnable
             {
                 Job job = new Job();
                 job.deserialize(message.getMessage());
-                this.removeMemory(job.getMemory());
-                this.jobManager.addCompletedJob(job);
+                this.addCompletedJob(job);
             }
             if (message.getType() == Message.CLOSECONNECTION)
             {
