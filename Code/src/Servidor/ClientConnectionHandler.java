@@ -5,22 +5,25 @@ import Worker.Job;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Class to handle the different types of Requests received from a client.
  */
-public class ConnectionHandler implements Runnable
+public class ClientConnectionHandler implements Runnable
 {
     private Server server;
     private Socket socket;
     private Connector connector;
+    private String username;
     private boolean isLoggedIn;
 
-    public ConnectionHandler(Server server, Socket socket) throws IOException
+    public ClientConnectionHandler(Server server, Socket socket) throws IOException
     {
         this.server = server;
         this.socket = socket;
         this.connector = new Connector(this.socket);
+        this.username = "";
         this.isLoggedIn = false;
     }
 
@@ -57,7 +60,8 @@ public class ConnectionHandler implements Runnable
                     int flag = this.server.autenticateUser(strings[0],strings[1]);
                     if (flag == 0)
                     {
-                        System.out.println("Authentication sucessfull in account with username: \"" + strings[0] + "\"");
+                        this.username = strings[0];
+                        System.out.println("Authentication sucessfull in account with username: \"" + this.username + "\"");
                         this.connector.send(message.getId(),message.getType(),message.getUser(), "Sucess".getBytes());
                         this.isLoggedIn = true;
                     } else if (flag == 1)
@@ -77,6 +81,7 @@ public class ConnectionHandler implements Runnable
 
     public boolean loggedInHandle()
     {
+        this.waitJobResults();
         do {
             String[] strings;
             Message message = this.connector.receive();
@@ -91,11 +96,6 @@ public class ConnectionHandler implements Runnable
                     if (job.getId() != -1)
                     {
                         this.server.addJobtoExecute(job);
-                        new Thread(() -> {
-                            Job response = this.server.getJobResponse(job);
-                            this.connector.send(message.getId(),Message.JOBRESULT,message.getUser(), response.serialize());
-                            System.out.println("Response of Job " + job.getId() + " from user " + job.getUser() + " sent sucessfully!");
-                        }).start(); // TODO Maybe saving this thread????
                     } else System.out.println("Something went wrong serializing Job object");
                     break;
                 case 4: // Job status
@@ -106,16 +106,33 @@ public class ConnectionHandler implements Runnable
                     this.connector.send(message.getId(),Message.SERVICESTATUS,message.getUser(),this.server.getServiceStatus().getBytes());
                     break;
                 case 6: // Logout
+                    this.username = "";
                     this.isLoggedIn = false;
                     this.connector.send(message.getId(),Message.LOGOUT,message.getUser(),"Sucess".getBytes());
                     System.out.println("User " + message.getUser() + " logged out.");
                     break;
                 case 10: // Close Connection
-                    // Do something here;
-                    break;
+                    return false;
             }
         } while (this.isLoggedIn);
         return true;
+    }
+
+    public void waitJobResults()
+    {
+        System.out.println("[Client Connection] Starting Thread to wait for user job results from user " + this.username);
+        Thread jobWaiter = new Thread(() -> {
+           while (this.isLoggedIn)
+           {
+               System.out.println("Waiting for job results from user " + this.username);
+               Job jobResult = this.server.getUserJobResults(this.username);
+               Message response = new Message(String.valueOf(jobResult.getId()),Message.JOBRESULT,this.username,jobResult.serialize());
+               this.connector.send(response);
+               System.out.println("[Job Result] Result for Job " + jobResult.getId() + " sent sucessfully to user " + this.username);
+           }
+        });
+        // TODO Adicionar thread à thread list
+        jobWaiter.start();
     }
 
     @Override
