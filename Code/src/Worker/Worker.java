@@ -107,12 +107,13 @@ public class Worker
 
     public static void main(String[] args)
     {
-        int memory = 1000, port = 8080;
+        int memory, port = 8080;
         String serverAddr = "localhost";
         if (args.length < 1)
         {
             System.out.println("Not enought arguments! Please give worker server memory and optionally the address and port of the Central Server socket!");
             System.out.println("Exemple: java Worker <memory> <Central Server Address(optional)> <Central Server Socket Port(optional)>");
+            return;
         }
         else
         {

@@ -17,7 +17,7 @@ public class Server {
     private ArrayList<Thread> threads;
     private ServerSocket workerSocket;
 
-    public Server(int memory) throws IOException {
+    public Server() throws IOException {
         this.accounts = new Accounts(CONFIGPATH);
         this.threads = new ArrayList<>();
         this.jobManager = new JobManager();
@@ -195,23 +195,12 @@ public class Server {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
         int port = 9090;
-        int memory = 1000;
-        if (args.length < 1)
+        if (args.length > 1)
         {
-            System.out.println("Few arguments, insert the memory size of the worker server and optionaly the port used in the TCP Connection!");
-            System.out.println("Aborting Program...");
-            return;
-        }
-        else
-        {
-            if (args.length > 1)
-            {
-                port = Integer.parseInt(args[1]);
-            }
-            memory = Integer.parseInt(args[0]);
+            port = Integer.parseInt(args[1]);
         }
 
-        Server server = new Server(memory);
+        Server server = new Server();
         try {
             server.start(port);
         } finally {
