@@ -25,16 +25,22 @@ public class TestThreads implements Runnable
     {
         ClientSystem clientSystem = new ClientSystem();
         clientSystem.start_connection("localhost",9090);
-        String login = clientSystem.login(username,"1234");
+        String login = null;
+        try {
+            login = clientSystem.login(username,"1234");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         if (!login.startsWith("Failed;"))
         {
             Random r = new Random();
             try {
                 byte[] jobCode = Files.readAllBytes(Path.of("/home/mikep/CloudServiceApp/ClientJobs/mikep/jobCodes",filename));
+//                int memory = 0;
                 for (int i = 0; i < 10; i++)
                 {
                     int memory = r.nextInt(999) + 1;
-//                    int memory = 100;
+//                    memory += 100;
                     clientSystem.jobExecRequest(i,jobCode,memory);
                     System.out.println("Sent job " + i + " of " + this.username + " memory " + memory);
                 }
@@ -47,6 +53,8 @@ public class TestThreads implements Runnable
                     } else System.out.println("Error executing job " + job.getId() + " from " + this.username + ";" + new String(job.getJobCode()));
                 }
             } catch (IOException e) {
+                throw new RuntimeException(e);
+            } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }

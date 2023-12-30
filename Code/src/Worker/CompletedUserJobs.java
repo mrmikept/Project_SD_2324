@@ -41,7 +41,7 @@ public class CompletedUserJobs
             }
             return this.completedJobs.poll();
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            return null;
         } finally {
             this.queueLock.unlock();
         }

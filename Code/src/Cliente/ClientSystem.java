@@ -30,10 +30,10 @@ public class ClientSystem {
         this.username = "";
         this.isLoggedin = false;
         this.threadList = new ArrayList<>();
+        this.socket = new Socket();
     }
 
-    public String register(String username, String password)
-    {
+    public String register(String username, String password) throws Exception {
         this.demultiplexer.send("reg",Message.CREATEACCOUT,username,(username + ";" + password).getBytes());
         byte[] bytes = this.demultiplexer.receive(Message.CREATEACCOUT);
         String message = new String(bytes);
@@ -43,8 +43,7 @@ public class ClientSystem {
         } else return message;
     }
 
-    public String login(String username, String password)
-    {
+    public String login(String username, String password) throws Exception {
         this.demultiplexer.send("auth",Message.AUTENTICATION,username,(username + ";" + password).getBytes());
         byte[] bytes = this.demultiplexer.receive(Message.AUTENTICATION);
         String message = new String(bytes);
@@ -60,8 +59,7 @@ public class ClientSystem {
         }
     }
 
-    public boolean logout()
-    {
+    public boolean logout() throws Exception {
         if (this.isLoggedin)
         {
             this.demultiplexer.send("logout",Message.LOGOUT,this.username,"Logging out".getBytes());
@@ -101,11 +99,15 @@ public class ClientSystem {
         }
     }
 
-    public void jobExecRequest(int jobId, byte[] jobCode, int memoryNedded)
-    {
+    public boolean jobExecRequest(int jobId, byte[] jobCode, int memoryNedded) throws Exception {
         this.saveJobResult(jobId,null);
-        Job job = new Job(jobId, this.username, jobCode, memoryNedded);
+        Job job = new Job(jobId, this.username, jobCode, memoryNedded, Job.PENDING);
         this.demultiplexer.send(String.valueOf(jobId),Message.JOBREQUEST,this.username, job.serialize());
+        byte[] message = this.demultiplexer.receive(Message.JOBREQUEST);
+        if (new String(message).equals("Sucess"))
+        {
+            return true;
+        } else return false;
     }
 
     public void saveJobResult(int jobID, Job job)
@@ -118,8 +120,7 @@ public class ClientSystem {
         }
     }
 
-    public Job waitJobResult()
-    {
+    public Job waitJobResult() throws Exception {
         byte[] data = this.demultiplexer.receive(Message.JOBRESULT);
         Job result = new Job();
         result.deserialize(data);
@@ -157,8 +158,7 @@ public class ClientSystem {
 
     }
 
-    public String RequestServiceStatus()
-    {
+    public String RequestServiceStatus() throws Exception {
         this.demultiplexer.send("Status",Message.SERVICESTATUS,this.username,"status".getBytes());
         byte[] data = this.demultiplexer.receive(Message.SERVICESTATUS);
         String[] strings = new String(data).split(";");
@@ -171,10 +171,16 @@ public class ClientSystem {
     }
 
     public void close() throws IOException, InterruptedException {
-        this.demultiplexer.close();
+        if (this.demultiplexer != null)
+        {
+            System.out.println("Closing Demultiplexer...");
+            this.demultiplexer.close();
+        }
+        System.out.println("Closing Socket...");
         this.socket.close();
         for (Thread t : this.threadList)
         {
+            System.out.println("Waiting for thread " + t.getName());
             t.join();
         }
     }

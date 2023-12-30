@@ -117,9 +117,9 @@ public class Worker
             {
                 System.out.println(e.getMessage());
             }
-        } catch (IOException e)
+        } catch (Exception e)
         {
-            System.out.println(e.getMessage());
+            System.out.println("Something went wrong... Closing..");
             return;
         }
 

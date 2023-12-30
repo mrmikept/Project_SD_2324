@@ -23,12 +23,20 @@ public class Client {
         }
 
         ClientSystem clientSystem = new ClientSystem();
-        ClientInterface vista = new ClientInterface();
-        ClientController controlador = new ClientController(clientSystem, vista);
-        if (clientSystem.start(serverAddr,port))
+        try {
+            ClientInterface vista = new ClientInterface();
+            ClientController controlador = new ClientController(clientSystem, vista);
+            if (clientSystem.start(serverAddr,port))
+            {
+                controlador.run();
+            } else System.out.println("Could'nt start Client Program..");
+        } catch (Exception e)
         {
-            controlador.run();
+            System.out.println("Something went wrong.. Closing Program..");
+        } finally {
+            clientSystem.close();
         }
+
     }
 
 }

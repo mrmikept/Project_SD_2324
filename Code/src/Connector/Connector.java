@@ -71,9 +71,13 @@ public class Connector
             this.inputStream.readFully(message);
 
             return new Message(id,type,user,message);
-        } catch (IOException e) {
-            return null;
-        } finally {
+        }
+        catch (NullPointerException | IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+        finally
+        {
             this.readLock.unlock();
         }
     }

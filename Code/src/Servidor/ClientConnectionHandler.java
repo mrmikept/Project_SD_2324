@@ -17,6 +17,7 @@ public class ClientConnectionHandler implements Runnable
     private Connector connector;
     private String username;
     private boolean isLoggedIn;
+    private Thread jobWaiter;
 
     public ClientConnectionHandler(Server server, Socket socket) throws IOException
     {
@@ -27,8 +28,7 @@ public class ClientConnectionHandler implements Runnable
         this.isLoggedIn = false;
     }
 
-    public boolean logOutHandle()
-    {
+    public boolean logOutHandle() throws IOException {
         do {
             String[] strings;
             Message message = this.connector.receive();
@@ -79,8 +79,7 @@ public class ClientConnectionHandler implements Runnable
         return true;
     }
 
-    public boolean loggedInHandle()
-    {
+    public boolean loggedInHandle() throws IOException {
         this.waitJobResults();
         do {
             String[] strings;
@@ -95,7 +94,10 @@ public class ClientConnectionHandler implements Runnable
                     job.deserialize(message.getMessage());
                     if (job.getId() != -1)
                     {
-                        this.server.addJobtoExecute(job);
+                        if (this.server.addJobtoExecute(job))
+                        {
+                            this.connector.send(message.getId(),Message.JOBREQUEST,message.getUser(),"Sucess".getBytes());
+                        } else this.connector.send(message.getId(),Message.JOBREQUEST,message.getUser(),"Failed".getBytes());
                     } else System.out.println("Something went wrong serializing Job object");
                     break;
                 case 4: // Job status
@@ -126,34 +128,56 @@ public class ClientConnectionHandler implements Runnable
            {
                System.out.println("Waiting for job results from user " + this.username);
                Job jobResult = this.server.getUserJobResults(this.username);
+               if (jobResult == null)
+               {
+                   break;
+               }
                Message response = new Message(String.valueOf(jobResult.getId()),Message.JOBRESULT,this.username,jobResult.serialize());
                this.connector.send(response);
                System.out.println("[Job Result] Result for Job " + jobResult.getId() + " sent sucessfully to user " + this.username);
            }
         });
-        // TODO Adicionar thread à thread list
         jobWaiter.start();
+        this.jobWaiter = jobWaiter;
+    }
+
+    public void close() throws InterruptedException, IOException {
+        if (this.jobWaiter != null)
+        {
+            this.jobWaiter.interrupt();
+            this.jobWaiter.join();
+        }
+        this.connector.close();
+        System.out.println("[Client Connector] Connection with client closed.");
     }
 
     @Override
     public void run()
     {
-        boolean connection = true;
-        do
-        {
-            connection = logOutHandle();
-            if (!connection)
-            {
-                break;
-            }
-            connection = loggedInHandle();
-        } while (connection);
-        System.out.println("Connection closed!");
-        this.isLoggedIn = false;
         try {
-            this.connector.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            boolean connection = true;
+            do
+            {
+                connection = logOutHandle();
+                if (!connection)
+                {
+                    break;
+                }
+                connection = loggedInHandle();
+            } while (connection);
+            System.out.println("Connection closed!");
+            this.isLoggedIn = false;
+        } catch (Exception e)
+        {
+            System.out.println("[Client Connector] Something went wrong with connection with user.");
+        } finally {
+            try {
+                this.close();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }

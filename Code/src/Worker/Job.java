@@ -1,17 +1,25 @@
 package Worker;
 
+import Servidor.JobManager;
+
 import java.io.*;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Job implements Serializable, Comparable<Job>
 {
+    public static final int PENDING = 0;
+    public static final int EXECUTING = 1;
+    public static final int SUCESS = 2;
+    public static final int ERROR = 3;
     private int id; // Job identifier
     private String user; // User who requested the execution of the Job
     private byte[] jobCode; // Job code to be executed
     private int memory; // Necessary Memory for the job execution
     private int priority;
+    private int state;
     private ReentrantLock jobLock;
     private Condition condition;
 
@@ -22,14 +30,16 @@ public class Job implements Serializable, Comparable<Job>
         this.jobCode = null;
         this.priority = 0;
         this.memory = 0;
+        this.state = PENDING;
     }
-    public Job(int id, String user, byte[] jobCode, int memory) {
+    public Job(int id, String user, byte[] jobCode, int memory, int state) {
         this.id = id;
         this.user = user;
         this.jobCode = jobCode;
         this.memory = memory;
         this.jobLock = new ReentrantLock();
         this.priority = 0;
+        this.state = state;
         this.condition = this.jobLock.newCondition();
     }
 
@@ -39,6 +49,16 @@ public class Job implements Serializable, Comparable<Job>
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public int getState()
+    {
+        return this.state;
+    }
+
+    public void setState(int state)
+    {
+        this.state = state;
     }
 
     public String getUser() {
@@ -78,6 +98,7 @@ public class Job implements Serializable, Comparable<Job>
                 dataOutputStream.writeInt(this.getId());
                 dataOutputStream.writeUTF(this.getUser());
                 dataOutputStream.writeInt(this.memory);
+                dataOutputStream.writeInt(this.state);
                 dataOutputStream.writeInt(this.jobCode.length);
                 dataOutputStream.write(this.jobCode);
                 dataOutputStream.flush();
@@ -103,6 +124,7 @@ public class Job implements Serializable, Comparable<Job>
                 this.id = dataInputStream.readInt();
                 this.user = dataInputStream.readUTF();
                 this.memory = dataInputStream.readInt();
+                this.state = dataInputStream.readInt();
                 int size = dataInputStream.readInt();
                 this.jobCode = new byte[size];
                 dataInputStream.readFully(this.jobCode);
@@ -116,20 +138,29 @@ public class Job implements Serializable, Comparable<Job>
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Job job = (Job) o;
+        return id == job.id && memory == job.memory && user.equals(job.user);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, user, memory);
+    }
+
     public int compareTo(Job o) {
-        if (this.getPriority() == 3) {
-            return 1;
+        if (this.getPriority() == 3 || o.getPriority() == 3) {
+            return Integer.compare(this.getPriority(), o.getPriority());
         }
 
-        int memoryDiff = Integer.compare(this.getMemory(), o.getMemory());
+        int memoryComp = Integer.compare(this.getMemory(), o.getMemory());
 
-        if (memoryDiff < 0) {
+        if (memoryComp > 0) {
             this.priority++;
-            return -1; // Job atual tem menor memória, então deve estar em primeiro na fila.
-        } else if (memoryDiff > 0) {
-            return 1; // Job atual tem maior memória, então deve estar em segundo na fila.
-        } else {
-            return 0; // Empate em memória, o Job atual e o Job comparado são considerados iguais.
         }
+
+        return memoryComp;
     }
 }

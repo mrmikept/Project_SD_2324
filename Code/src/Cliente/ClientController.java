@@ -17,11 +17,62 @@ public class ClientController
     private ClientSystem system;
     private ClientInterface cliInterface;
     private String username;
+    private Thread jobNotifier;
 
     public ClientController(ClientSystem system, ClientInterface cliInterface) {
         this.system = system;
         this.cliInterface = cliInterface;
         this.username = "";
+        ReentrantLock printLock = new ReentrantLock();
+        this.jobNotifier = new Thread(() ->
+        {
+            while (this.system.isLoggedIn()) {
+                Job result = null;
+                try {
+                    result = this.system.waitJobResult();
+                } catch (Exception e) {
+                    break;
+                }
+                if (result.getState() == Job.ERROR)
+                {
+                    String string = new String(result.getJobCode());
+                    if (string.equals("ERROR"))
+                    {
+                        printLock.lock();
+                        try {
+                            System.out.println("\n[Job Result] Received result from job " + result.getId());
+                            System.out.println("An error has ocorred, cannot compute job, too much memory needed.");
+                        } finally {
+                            printLock.unlock();
+                        }
+                    }
+                    else
+                    {
+                        String[] strings = string.split(";");
+                        printLock.lock();
+                        try {
+                            System.out.println("\n[Job Result] Received result from Job " + result.getId());
+                            System.out.println("Failed executing job, error code: " + strings[1] + "; Message: " + strings[2]);
+                        } finally {
+                            printLock.unlock();
+                        }
+                    }
+                }
+                else
+                {
+                    printLock.lock();
+                    try {
+                        System.out.println("\n[Job result] Received result from Job " + result.getId());
+                        System.out.println("Sucess executing job, received " + result.getJobCode().length + " bytes\n");
+                        System.out.println("Saving result into a file in results folder!");
+                    } finally {
+                        printLock.unlock();
+                    }
+                    this.saveJobResult(result);
+                }
+            }
+        });
+        this.jobNotifier.setName("Job Notifier Thread");
     }
 
     public boolean isDigit(String string)
@@ -29,7 +80,7 @@ public class ClientController
         return string.matches("\\d+");
     }
 
-    public int startMenu() throws IOException, InterruptedException {
+    public int startMenu() throws Exception {
         int option = 0;
         String username, password, response;
         BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
@@ -88,7 +139,6 @@ public class ClientController
                         break;
                     case 3: // Exit case
                         System.out.println("Exiting Program...");
-                        this.system.close();
                         return -1;
                 }
             } while (option != 10);
@@ -96,41 +146,12 @@ public class ClientController
 
     }
 
-    public void clientMenu() throws IOException {
+    public int clientMenu() throws Exception {
         this.createJobsFolder();
         int option = 0;
         CodeGen mycodes = new CodeGen();
         BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
-        ReentrantLock printLock = new ReentrantLock();
-        Thread completedJobNotificatorAndWriter = new Thread(() -> {
-            do {
-                Job result = this.system.waitJobResult();
-                if (result.getMemory() == -1)
-                {
-                    String[] strings = new String(result.getJobCode()).split(";");
-                    printLock.lock();
-                    try {
-                        System.out.println("\n[Job Result] Received result from Job " + result.getId());
-                        System.out.println("Failed executing job, error code: " + strings[1] + "; Message: " + strings[2]);
-                    } finally {
-                        printLock.unlock();
-                    }
-                }
-                else
-                {
-                    printLock.lock();
-                    try {
-                        System.out.println("\n[Job result] Received result from Job " + result.getId());
-                        System.out.println("Sucess executing job, received " + result.getJobCode().length + " bytes\n");
-                        System.out.println("Saving result into a file in results folder!");
-                    } finally {
-                        printLock.unlock();
-                    }
-                    this.saveJobResult(result);
-                }
-            } while (this.system.isLoggedIn());
-        });
-        completedJobNotificatorAndWriter.start();
+        this.jobNotifier.start();
         do {
             switch (option)
             {
@@ -179,9 +200,14 @@ public class ClientController
 
                     int memory = Integer.parseInt(in);
                     int jobCode = mycodes.newCode();
-                    this.system.jobExecRequest(jobCode,fileData,memory);
-
-                    System.out.println("\nSucessfully send request for job execution, with code " + jobCode + ".");
+                    if (this.system.jobExecRequest(jobCode,fileData,memory))
+                    {
+                        System.out.println("\nSucessfully send request for job execution, with code " + jobCode + ".");
+                    }
+                    else
+                    {
+                        System.out.println("\nSorry, job can't be computed at the moment, too much memory nedded.");
+                    }
                     System.out.println("Press any key to go back.");
                     input.readLine();
                     option = 0;
@@ -216,19 +242,20 @@ public class ClientController
                     System.out.println("Logging out...");
                     if (this.system.logout())
                     {
-                        System.out.println("Action sucessfull!\n");
+                        System.out.println("Action sucessfull!\nClosing Program.");
                         option = 10;
                     }
                     else
                     {
                         System.out.println("Something went wrong... Try again later!\n");
                         option = 0;
+                        System.out.println("Press any key to continue...");
+                        input.readLine();
                     }
-                    System.out.println("Press any key to continue...");
-                    input.readLine();
                     break;
             }
         } while (option != 10);
+        return -1;
     }
 
     public void createJobsFolder()
@@ -272,21 +299,27 @@ public class ClientController
     }
 
     public void run() throws IOException, InterruptedException {
-        int flag = 1;
-        do {
-            switch (flag)
-            {
-                case 0: // ClientMenu
-                    this.clientMenu();
-                    flag = 1;
-                    break;
-                case 1: // StartMenu
-                    flag = this.startMenu();
-                    break;
-            }
-        } while (flag != -1);
-
-        this.system.close();
+        try {
+            int flag = 1;
+            do {
+                switch (flag)
+                {
+                    case 0: // ClientMenu
+                        flag = this.clientMenu();
+                        break;
+                    case 1: // StartMenu
+                        flag = this.startMenu();
+                        break;
+                }
+            } while (flag != -1);
+        } catch (Exception e)
+        {
+            System.out.println("Something went wrong... Closing Program...");
+        } finally {
+            System.out.println("Waiting for " + jobNotifier.getName());
+            this.jobNotifier.interrupt();
+            this.jobNotifier.join();
         }
+    }
 
 }
