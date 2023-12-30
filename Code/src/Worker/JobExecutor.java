@@ -25,12 +25,12 @@ public class JobExecutor implements Runnable
         {
             System.out.println("Executing job " + this.job.getId() + " from user " + job.getUser());
             byte[] output = JobFunction.execute(this.job.getJobCode());
-            this.result = 0;
+            this.result = Job.SUCESS;
             System.out.println("Sucess executing job " + this.job.getId() + " from user " + this.job.getUser() + ": returned " + output.length + " bytes.");
             return output;
         } catch (JobFunctionException e)
         {
-            this.result = -1;
+            this.result = Job.ERROR;
             System.out.println("Failed executing job " + this.job.getId() + " from user " + this.job.getUser() + ": returned code " + e.getCode() + " message: " + e.getMessage());
             return ("Failed;" + e.getCode() + ";" + e.getMessage()).getBytes();
         }
@@ -39,6 +39,6 @@ public class JobExecutor implements Runnable
     public void run()
     {
         byte[] response = this.execJob();
-        this.worker.sendCompletedJob(new Job(this.job.getId(),this.job.getUser(),response,this.job.getMemory()));
+        this.worker.sendCompletedJob(new Job(this.job.getId(),this.job.getUser(),response,this.job.getMemory(),this.result));
     }
 }

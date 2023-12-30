@@ -13,13 +13,21 @@ public class Server {
     private static final String CONFIGPATH = System.getProperty("user.home") + "/CloudServiceApp/serverConfig/";
     private Accounts accounts;
     private JobManager jobManager;
-    private ServerSocket serverSocket;
+    private ServerSocket clientSocket;
     private ArrayList<Thread> threads;
+    private ServerSocket workerSocket;
 
-    public Server(int memory) {
+    public Server(int memory) throws IOException {
         this.accounts = new Accounts(CONFIGPATH);
         this.threads = new ArrayList<>();
         this.jobManager = new JobManager();
+        this.clientSocket = new ServerSocket();
+        this.workerSocket = new ServerSocket();
+    }
+
+    public void updateMaxMemory(int memory)
+    {
+        this.jobManager.updateMaxMemorySingle(memory);
     }
 
     public void startSocket(int port)
@@ -27,7 +35,7 @@ public class Server {
         Thread workerConnection = new Thread(() -> {
             try {
                 int workers = 0;
-                ServerSocket workerSocket = new ServerSocket(8080);
+                this.workerSocket = new ServerSocket(8080);
                 System.out.println("Listening for workers connection at port " + workerSocket.getLocalPort());
                 while (true)
                 {
@@ -35,11 +43,10 @@ public class Server {
                     System.out.println("New Worker connected!");
                     WorkerConnectionHandler workerConnector = new WorkerConnectionHandler(this,worker,this.jobManager,workers);
                     Thread thread = new Thread(workerConnector);
-                    this.jobManager.addWorker(workerConnector);
                     thread.start();
+                    this.jobManager.addWorker(workerConnector);
                     this.threads.add(thread);
                     workers++;
-
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -48,11 +55,11 @@ public class Server {
         workerConnection.start();
 
         try{
-            this.serverSocket = new ServerSocket(port);
-            System.out.println("Socket open at port: " + this.serverSocket.getLocalPort());
+            this.clientSocket = new ServerSocket(port);
+            System.out.println("Socket open at port: " + this.clientSocket.getLocalPort());
             while (true)
             {
-                Socket client = serverSocket.accept();
+                Socket client = clientSocket.accept();
                 System.out.println("New client connection, creating new thread...");
                 Thread thread = new Thread(new ClientConnectionHandler(this,client));
                 this.threads.add(thread);
@@ -104,12 +111,24 @@ public class Server {
         Thread jobManager = new Thread(this.jobManager);
         jobManager.setName("JobManagerThread");
         jobManager.start();
+        this.threads.add(jobManager);
         this.startSocket(port);
     }
 
-    public void addJobtoExecute(Job job)
+    public void stop() throws InterruptedException, IOException {
+        for (Thread t : this.threads)
+        {
+            t.interrupt();
+            t.join();
+        }
+        this.clientSocket.close();
+        this.workerSocket.close();
+
+    }
+
+    public boolean addJobtoExecute(Job job)
     {
-        this.jobManager.addPendingJob(job);
+        return this.jobManager.addPendingJob(job);
     }
 
     public Job getUserJobResults(String user)
@@ -124,7 +143,7 @@ public class Server {
         return memory + ";" + pending;
     }
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
+    public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
         int port = 9090;
         int memory = 1000;
         if (args.length < 1)
@@ -143,7 +162,10 @@ public class Server {
         }
 
         Server server = new Server(memory);
-        server.start(port);
-
+        try {
+            server.start(port);
+        } finally {
+            server.stop();
+        }
     }
 }

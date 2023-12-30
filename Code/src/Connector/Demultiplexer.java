@@ -1,8 +1,10 @@
 package Connector;
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -13,12 +15,14 @@ public class Demultiplexer implements Runnable
     private Connector connector;
     private Map<Integer, MessageTypeWaiters> mapType;
     private ReentrantLock lock;
+    private Exception exeception;
 
     public Demultiplexer(Connector connector)
     {
         this.connector = connector;
         this.mapType = new HashMap<>();
         this.lock = new ReentrantLock();
+        this.exeception = null;
     }
 
     /**
@@ -47,7 +51,7 @@ public class Demultiplexer implements Runnable
      * @param type Message type
      * @return Message received
      */
-    public byte[] receive(int type)
+    public byte[] receive(int type) throws Exception
     {
         this.lock.lock();
         try {
@@ -60,6 +64,10 @@ public class Demultiplexer implements Runnable
             typeWaiter.addWaiter();
             while (true)
             {
+                if (this.exeception != null)
+                {
+                    throw this.exeception;
+                }
                 if (!typeWaiter.isQueueEmpty())
                 {
                     byte[] reply = typeWaiter.getMessage();
@@ -72,9 +80,6 @@ public class Demultiplexer implements Runnable
                 }
                 typeWaiter.condition.await();
             }
-
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
         } finally {
             this.lock.unlock();
         }
@@ -86,28 +91,35 @@ public class Demultiplexer implements Runnable
     @Override
     public void run()
     {
-        while (true)
-        {
-            Message message = this.connector.receive();
-            if (message == null)
-            {
-                try {
-                    this.connector.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+        while (true) {
+            Message message = null;
+            try {
+                message = this.connector.receive();
+                if (message == null) {
+                    break;
                 }
-                break;
+            } catch (Exception e) {
+                this.lock.lock();
+                try {
+                    this.exeception = e;
+                    this.mapType.forEach((key, value) -> value.condition.signalAll());
+                    break;
+                } finally {
+                    this.lock.unlock();
+                }
             }
             this.lock.lock();
             try {
-                MessageTypeWaiters typeWaiters = this.mapType.get(message.getType());
-                if (typeWaiters == null)
+                if (message != null)
                 {
-                    typeWaiters = new MessageTypeWaiters(this.lock);
-                    this.mapType.put(message.getType(),typeWaiters);
-                }
-                typeWaiters.addMessage(message.getMessage());
-                typeWaiters.condition.signalAll();
+                    MessageTypeWaiters typeWaiters = this.mapType.get(message.getType());
+                    if (typeWaiters == null) {
+                        typeWaiters = new MessageTypeWaiters(this.lock);
+                        this.mapType.put(message.getType(), typeWaiters);
+                    }
+                    typeWaiters.addMessage(message.getMessage());
+                    typeWaiters.condition.signalAll();
+                } else break;
             } finally {
                 this.lock.unlock();
             }

@@ -9,11 +9,11 @@ public class Test
         Thread.sleep(2000);
         t2.start();
 //
-        Thread.sleep(2000);
+//        Thread.sleep(2000);
 //
-        Thread t3 = new Thread(new TestThreads("user1","file1"));
-        Thread t4 = new Thread(new TestThreads("user2", "file2"));
-        t3.start();
-        t4.start();
+//        Thread t3 = new Thread(new TestThreads("user1","file1"));
+//        Thread t4 = new Thread(new TestThreads("user2", "file2"));
+//        t3.start();
+//        t4.start();
     }
 }

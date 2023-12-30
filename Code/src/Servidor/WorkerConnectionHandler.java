@@ -18,7 +18,7 @@ public class WorkerConnectionHandler implements Runnable
     Connector connector;
     private int totalMemory;
     private int usedMemory;
-    private ReentrantLock memoryLock;
+    ReentrantLock memoryLock;
 
     public WorkerConnectionHandler(Server server, Socket socket, JobManager manager, int id) throws IOException {
         this.id = id;
@@ -36,16 +36,21 @@ public class WorkerConnectionHandler implements Runnable
         return this.id;
     }
 
-    private boolean receiveWorkerMemory()
-    {
+    private boolean receiveWorkerMemory() throws IOException {
         while (this.totalMemory == 0)
         {
             Message message = this.connector.receive();
             if (message == null) return false;
             if (message.getType() == Message.MEMORYINFO)
             {
-                String m = new String(message.getMessage());
-                this.totalMemory = Integer.parseInt(m);
+                this.memoryLock.lock();
+                try {
+                    String m = new String(message.getMessage());
+                    this.totalMemory = Integer.parseInt(m);
+                    this.server.updateMaxMemory(this.totalMemory);
+                } finally {
+                    this.memoryLock.unlock();
+                }
                 System.out.println("Received Worker Server Memory: " + this.totalMemory);
                 break;
             }
@@ -103,8 +108,7 @@ public class WorkerConnectionHandler implements Runnable
         System.out.println("Job " + job.getId() + " of user " + job.getUser() + " (memory nedded: " + job.getMemory() +  ") was sent to be executed in Worker Server " + this.getId() + " memory used " + this.getUsedMemory() + " bytes, of " + this.getTotalMemory() + " bytes.");
     }
 
-    public boolean handle()
-    {
+    public boolean handle() throws IOException {
         while (true)
         {
             Message message = this.connector.receive();
@@ -123,19 +127,35 @@ public class WorkerConnectionHandler implements Runnable
         return true;
     }
 
-    @Override
-    public void run()
+    public void close()
     {
-        boolean sucess = false;
-        do {
-            sucess = this.receiveWorkerMemory();
-            if (!sucess) break;
-            this.handle();
-        } while (true);
+        this.jobManager.removeWorker(this);
         try {
             this.connector.close();
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    @Override
+    public void run()
+    {
+        try
+        {
+            boolean flag = true;
+            while (flag)
+            {
+                flag = this.receiveWorkerMemory();
+                if (!flag) break;
+                flag = this.handle();
+            }
+        } catch (Exception e)
+        {
+            System.out.println("Lost Connection with worker " + this.getId());
+        }
+        finally {
+            this.close();
+        }
+
     }
 }

@@ -3,9 +3,13 @@ package Servidor;
 import Worker.CompletedUserJobs;
 import Worker.Job;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.*;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class JobManager implements Runnable
 {
@@ -19,6 +23,8 @@ public class JobManager implements Runnable
     private ReentrantLock completedJobLock; // Lock for the completedJob map
     private List<WorkerConnectionHandler> workers; // List with workers connected
     private ReentrantLock workerListLock; // Lock for the Connected workers list
+    private int maxWorkerMemory;
+    private ReentrantReadWriteLock maxMemoryLock;
 
     public JobManager()
     {
@@ -32,6 +38,8 @@ public class JobManager implements Runnable
         this.completedJobLock = new ReentrantLock();
         this.workers = new ArrayList<>();
         this.workerListLock = new ReentrantLock();
+        this.maxWorkerMemory = 0;
+        this.maxMemoryLock = new ReentrantReadWriteLock();
     }
 
     public int getAvailableMemory()
@@ -48,6 +56,16 @@ public class JobManager implements Runnable
             return totalMemory - usedMemory;
         } finally {
             this.workerListLock.unlock();
+        }
+    }
+
+    public int getMaxWorkerMemory()
+    {
+        this.maxMemoryLock.readLock().lock();
+        try {
+            return this.maxWorkerMemory;
+        } finally {
+            this.maxMemoryLock.readLock().unlock();
         }
     }
 
@@ -81,38 +99,21 @@ public class JobManager implements Runnable
         }
     }
 
-//    public Job waitForJobCompletion(Job job)
-//    {
-//        this.completedJobLock.lock();
-//        try {
-//            CompJobWaiters jobWaiters = this.completeJobsMap.get(job.getUser());
-//            if (jobWaiters == null)
-//            {
-//                jobWaiters = new CompJobWaiters(this.completedJobLock, job.getUser());
-//                this.completeJobsMap.put(job.getUser(),jobWaiters);
-//            }
-//            jobWaiters.addWaiter();
-//
-//            while (true)
-//            {
-//                Job result = jobWaiters.getJobResult(job.getId());
-//                if (result != null)
-//                {
-//                    jobWaiters.removeWaiter();
-//                    if (jobWaiters.isMapEmpty() && jobWaiters.getWaiters() == 0)
-//                    {
-//                        this.completeJobsMap.remove(job.getUser());
-//                    }
-//                    return result;
-//                }
-//                jobWaiters.condition.await();
-//            }
-//        } catch (InterruptedException e) {
-//            throw new RuntimeException(e);
-//        } finally {
-//            this.completedJobLock.unlock();
-//        }
-//    }
+    public void addErrorJob(Job job)
+    {
+        this.completedJobLock.lock();
+        try {
+            CompletedUserJobs completedUserJobs = this.completeJobsMap.get(job.getUser());
+            if (completedUserJobs == null)
+            {
+                completedUserJobs = new CompletedUserJobs();
+                this.completeJobsMap.put(job.getUser(),completedUserJobs);
+            }
+            completedUserJobs.addCompletedJob(job);
+        } finally {
+            this.completedJobLock.unlock();
+        }
+    }
 
     public Job waitForJobCompletion(String user)
     {
@@ -131,38 +132,17 @@ public class JobManager implements Runnable
         return completedUserJobs.getCompletedJob();
     }
 
-    public void addPendingJob(Job job)
+    public boolean addPendingJob(Job job)
     {
         this.pendingJobsLock.lock();
         try
         {
-            this.pendingJobs.add(job);
-            this.pendingJobsCondition.signalAll();
-        } finally {
-            this.pendingJobsLock.unlock();
-        }
-    }
-
-    public Job getPendingJob(int memoryAvailable)
-    {
-        this.pendingJobsLock.lock();
-        try {
-            Job job = null;
-            while (this.pendingJobs.isEmpty())
+            if (job.getMemory() <= this.getMaxWorkerMemory())
             {
-                try {
-                    System.out.println("Waiting for new Jobs...");
-                    this.pendingJobsCondition.await();
-                } catch (InterruptedException e)
-                {
-                    System.out.println(e.getMessage());
-                }
-            }
-            job = this.pendingJobs.peek();
-            if (job.getMemory() <= memoryAvailable)
-            {
-                return this.pendingJobs.poll();
-            } else return null;
+                this.pendingJobs.offer(job);
+                this.pendingJobsCondition.signalAll();
+                return true;
+            } else return false;
         } finally {
             this.pendingJobsLock.unlock();
         }
@@ -180,6 +160,45 @@ public class JobManager implements Runnable
         }
     }
 
+
+    public void updateMaxMemorySingle(int memory)
+    {
+        if (this.getMaxWorkerMemory() < memory)
+        {
+            this.maxMemoryLock.writeLock().lock();
+            try {
+                this.maxWorkerMemory = memory;
+            } finally {
+                this.maxMemoryLock.writeLock().unlock();
+            }
+        }
+    }
+
+    public void updateMaxMemory()
+    {
+        this.workerListLock.lock();
+        int max = 0;
+        try
+        {
+            for (WorkerConnectionHandler worker : this.workers)
+            {
+                int workerTotal = worker.getTotalMemory();
+                if (max < workerTotal)
+                {
+                    max = workerTotal;
+                }
+            }
+            this.maxMemoryLock.writeLock().lock();
+            try {
+                this.maxWorkerMemory = max;
+            } finally {
+                this.maxMemoryLock.writeLock().unlock();
+            }
+        } finally {
+            this.workerListLock.unlock();
+        }
+    }
+
     public void removeWorker(WorkerConnectionHandler worker)
     {
         this.workerListLock.lock();
@@ -187,8 +206,44 @@ public class JobManager implements Runnable
         {
             this.workers.remove(worker);
             System.out.println("Removed worker with id " + worker.getId());
+            this.updateMaxMemory();
+            System.out.println(this.getMaxWorkerMemory());
         } finally {
             this.workerListLock.unlock();
+        }
+        this.dumpExecutingWorkerJobs(worker.getId());
+    }
+
+    /**
+     * Puts all the jobs in execution in the worker server back into the pending jobs queue.
+     * @param workerId Id of the worker server
+     */
+    public void dumpExecutingWorkerJobs(int workerId)
+    {
+        this.executionJobsLock.lock();
+        List<Job> workerJobs = this.executingJobs.get(workerId);
+        try {
+            if (workerJobs == null)
+            {
+                return;
+            }
+            if (workerJobs.isEmpty())
+            {
+                return;
+            }
+        } finally {
+            this.executionJobsLock.unlock();
+        }
+        for (Job job : workerJobs) {
+            if (job.getMemory() <= this.maxWorkerMemory)
+            {
+                job.setState(Job.PENDING);
+                this.addPendingJob(job);
+            }
+            else
+            {
+                this.addErrorJob((new Job(job.getId(),job.getUser(),"ERROR".getBytes(),job.getMemory(), Job.ERROR)));
+            }
         }
     }
 
@@ -248,6 +303,7 @@ public class JobManager implements Runnable
                             {
                                 sucess = true;
                                 workerId = worker.getId();
+                                job.setState(Job.EXECUTING);
                                 worker.sendJobRequest(job);
                                 break;
                             }
