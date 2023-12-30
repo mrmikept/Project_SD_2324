@@ -25,11 +25,19 @@ public class Server {
         this.workerSocket = new ServerSocket();
     }
 
+    /**
+     * Updates the Max Job memory allowed in Job Manager.
+     * @param memory
+     */
     public void updateMaxMemory(int memory)
     {
         this.jobManager.updateMaxMemorySingle(memory);
     }
 
+    /**
+     * Starts the sockets for the client's and worker's connection and creates new thread to handle the connections
+     * @param port Port to start the Client Socket
+     */
     public void startSocket(int port)
     {
         Thread workerConnection = new Thread(() -> {
@@ -72,15 +80,27 @@ public class Server {
         }
     }
 
-    public boolean registerUser(String email, String password)
+    /**
+     * Method to register an user account
+     * @param username Username for the account
+     * @param password Password for the account
+     * @return True if registering is sucessfull and False otherwise
+     */
+    public boolean registerUser(String username, String password)
     {
-        if (!this.accounts.verifyAccount(email))
+        if (!this.accounts.verifyAccount(username))
         {
-            this.accounts.registerAccount(email,password);
+            this.accounts.registerAccount(username,password);
             return true;
         } else return false;
     }
 
+    /**
+     * Method to authenticate a given user
+     * @param user username of the account
+     * @param password password of the account
+     * @return 0 if the authentication is sucessfull, 1 is the username is not registed and -1 if the the authentication was not sucessfull
+     */
     public int autenticateUser(String user, String password)
     {
         if (this.accounts.credentialsMatch(user,password))
@@ -93,6 +113,11 @@ public class Server {
         } else return -1;
     }
 
+    /**
+     * Reds the Server Configuration Files
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
     public void readConfig() throws IOException, ClassNotFoundException {
         System.out.println("Reading configuration files...");
         File config = new File(CONFIGPATH);
@@ -106,6 +131,12 @@ public class Server {
         this.accounts.readFromFile(CONFIGPATH);
     }
 
+    /**
+     * Method to start the server, it reads all the config files, Creates a Thread for the Job Manager and start the sockets for the client's and worker's
+     * @param port
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
     public void start(int port) throws IOException, ClassNotFoundException {
         this.readConfig();
         Thread jobManager = new Thread(this.jobManager);
@@ -115,6 +146,11 @@ public class Server {
         this.startSocket(port);
     }
 
+    /**
+     * Method to stop the server, it interrupts all the executing Threads and Join them and closes the client and workers sockets.
+     * @throws InterruptedException
+     * @throws IOException
+     */
     public void stop() throws InterruptedException, IOException {
         for (Thread t : this.threads)
         {
@@ -126,16 +162,30 @@ public class Server {
 
     }
 
+    /**
+     * Adds a Job to be executed in the Job Manager.
+     * @param job Job to be executed
+     * @return true if the job can be executed, false otherwise
+     */
     public boolean addJobtoExecute(Job job)
     {
         return this.jobManager.addPendingJob(job);
     }
 
+    /**
+     * Returns a Completed Job from a user request
+     * @param user Username from the user who sent the Job
+     * @return The Completed Job
+     */
     public Job getUserJobResults(String user)
     {
         return this.jobManager.waitForJobCompletion(user);
     }
 
+    /**
+     * Gets the service status: the available memory and pending jobs of the service.
+     * @return A string with the information separated by ';'( ex: availableMemory;NumberPendingJobs
+     */
     public String getServiceStatus()
     {
         int memory = this.jobManager.getAvailableMemory();

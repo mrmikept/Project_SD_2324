@@ -55,6 +55,11 @@ public class Accounts
         }
     }
 
+    /**
+     * Saves and Account information in a file.
+     * @param username Username of the Account
+     * @param password Password of the Account
+     */
     public void saveAccountFile(String username, String password)
     {
         try{

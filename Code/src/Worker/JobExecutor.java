@@ -2,6 +2,9 @@ package Worker;
 
 import sd23.*;
 
+/**
+ * Runnable Class to execute a Job using the sd23.jar function given by the Professors.
+ */
 public class JobExecutor implements Runnable
 {
     Worker worker;

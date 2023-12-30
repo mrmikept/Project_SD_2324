@@ -5,6 +5,9 @@ import java.util.Queue;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * Class to store all the complete Jobs from a given User.
+ */
 public class CompletedUserJobs
 {
     private Queue<Job> completedJobs;
@@ -18,6 +21,10 @@ public class CompletedUserJobs
         this.queueCondition = this.queueLock.newCondition();
     }
 
+    /**
+     * Adds a completed job in the queue and signall all the threads waiting for a job result.
+     * @param job Job to add.
+     */
     public void addCompletedJob(Job job)
     {
         this.queueLock.lock();
@@ -30,6 +37,10 @@ public class CompletedUserJobs
         }
     }
 
+    /**
+     * Removes a completed job from the queue. If the queue is empty the thread waits for a job to be added.
+     * @return The job in front of the queue.
+     */
     public Job getCompletedJob()
     {
         this.queueLock.lock();

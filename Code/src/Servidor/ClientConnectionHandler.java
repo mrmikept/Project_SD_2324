@@ -28,6 +28,11 @@ public class ClientConnectionHandler implements Runnable
         this.isLoggedIn = false;
     }
 
+    /**
+     * Handle for the login and register messages
+     * @return True if the authentication was sucessfull and False otherwise
+     * @throws IOException
+     */
     public boolean logOutHandle() throws IOException {
         do {
             String[] strings;
@@ -79,6 +84,11 @@ public class ClientConnectionHandler implements Runnable
         return true;
     }
 
+    /**
+     * Handle for the Job execution request, Service Status and Logout messages.
+     * @return
+     * @throws IOException
+     */
     public boolean loggedInHandle() throws IOException {
         this.waitJobResults();
         do {
@@ -90,8 +100,7 @@ public class ClientConnectionHandler implements Runnable
             {
                 case 3: // Job Request
                     System.out.println("Received a job request from user " + message.getUser());
-                    Job job = new Job();
-                    job.deserialize(message.getMessage());
+                    Job job = Job.deserialize(message.getMessage());
                     if (job.getId() != -1)
                     {
                         if (this.server.addJobtoExecute(job))
@@ -99,9 +108,6 @@ public class ClientConnectionHandler implements Runnable
                             this.connector.send(message.getId(),Message.JOBREQUEST,message.getUser(),"Sucess".getBytes());
                         } else this.connector.send(message.getId(),Message.JOBREQUEST,message.getUser(),"Failed".getBytes());
                     } else System.out.println("Something went wrong serializing Job object");
-                    break;
-                case 4: // Job status
-                    // Do Something here
                     break;
                 case 5: // Service status
                     System.out.println("Received a service status request from user " + message.getUser());
@@ -120,6 +126,9 @@ public class ClientConnectionHandler implements Runnable
         return true;
     }
 
+    /**
+     * Method to create a Thread to wait for job results messages and sends them to the Client.
+     */
     public void waitJobResults()
     {
         System.out.println("[Client Connection] Starting Thread to wait for user job results from user " + this.username);
@@ -141,6 +150,11 @@ public class ClientConnectionHandler implements Runnable
         this.jobWaiter = jobWaiter;
     }
 
+    /**
+     * Method to close all the connections with a Client and Waits for the Threads to finish.
+     * @throws InterruptedException
+     * @throws IOException
+     */
     public void close() throws InterruptedException, IOException {
         if (this.jobWaiter != null)
         {

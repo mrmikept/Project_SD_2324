@@ -11,6 +11,9 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/**
+ * Class with all the methods and logic to send jobs to the worker's server to be executed and to manage all the workers connected
+ */
 public class JobManager implements Runnable
 {
     Queue<Job> pendingJobs; // Queue with pending jobs to be executed
@@ -18,13 +21,13 @@ public class JobManager implements Runnable
     Condition pendingJobsCondition; // Condition for the pending jobs lock
     Map<Integer,List<Job>> executingJobs; // Map for jobs being executed
     ReentrantLock executionJobsLock; // Lock for the executing jobs map
-    Condition executionCondition;
+    Condition executionCondition; // Condition for the waiters of the execution Job Locs
     Map<String, CompletedUserJobs> completeJobsMap; // Map to wait for job results. Key: Username, Value: CompJobWaiters
     private ReentrantLock completedJobLock; // Lock for the completedJob map
     private List<WorkerConnectionHandler> workers; // List with workers connected
     private ReentrantLock workerListLock; // Lock for the Connected workers list
-    private int maxWorkerMemory;
-    private ReentrantReadWriteLock maxMemoryLock;
+    private int maxWorkerMemory; // The max value of memory of all the workers
+    private ReentrantReadWriteLock maxMemoryLock; // Lock for the Max worker memory
 
     public JobManager()
     {
@@ -42,6 +45,10 @@ public class JobManager implements Runnable
         this.maxMemoryLock = new ReentrantReadWriteLock();
     }
 
+    /**
+     * Gets the available memory of the Service
+     * @return Availed memory of the Service
+     */
     public int getAvailableMemory()
     {
         int usedMemory = 0;
@@ -59,6 +66,10 @@ public class JobManager implements Runnable
         }
     }
 
+    /**
+     * Gets the max memory allowed for a job to be executed
+     * @return Max memory allowed for a job to be executed
+     */
     public int getMaxWorkerMemory()
     {
         this.maxMemoryLock.readLock().lock();
@@ -69,6 +80,11 @@ public class JobManager implements Runnable
         }
     }
 
+    /**
+     * Adds a Job to the completedJobs map and removes the Jobs from the on going execution job's map
+     * @param job Job completed
+     * @param workerId Id of the worker who executed the Job
+     */
     public void addCompletedJob(Job job, int workerId)
     {
         this.executionJobsLock.lock();
@@ -99,6 +115,10 @@ public class JobManager implements Runnable
         }
     }
 
+    /**
+     * Adds a Job that cannot be executed because of the max allowed memory to the complete Jobs map
+     * @param job Job Completed.
+     */
     public void addErrorJob(Job job)
     {
         this.completedJobLock.lock();
@@ -115,6 +135,11 @@ public class JobManager implements Runnable
         }
     }
 
+    /**
+     * Waits for the completion of a Job
+     * @param user Username of the user who sent the Job
+     * @return A job result from a Job request of the user.
+     */
     public Job waitForJobCompletion(String user)
     {
         this.completedJobLock.lock();
@@ -132,6 +157,11 @@ public class JobManager implements Runnable
         return completedUserJobs.getCompletedJob();
     }
 
+    /**
+     * Adds a Job to wait for bein executed. This method verifies if the job memory is less or equals to the max allowed Job memory.
+     * @param job Job to wait to be executed
+     * @return True if the job can be executed or False otherwise
+     */
     public boolean addPendingJob(Job job)
     {
         this.pendingJobsLock.lock();
@@ -148,6 +178,10 @@ public class JobManager implements Runnable
         }
     }
 
+    /**
+     * Adds a new Worker Connector
+     * @param worker Worker Connector to be added.
+     */
     public void addWorker(WorkerConnectionHandler worker)
     {
         this.workerListLock.lock();
@@ -160,7 +194,10 @@ public class JobManager implements Runnable
         }
     }
 
-
+    /**
+     * This function updates the Max Job memory allowed. It checks if the memory value given is greater than the max job memory allowed at the moment if yes then updates the max value.
+     * @param memory Memory value to update the max job memory allowed.
+     */
     public void updateMaxMemorySingle(int memory)
     {
         if (this.getMaxWorkerMemory() < memory)
@@ -174,6 +211,9 @@ public class JobManager implements Runnable
         }
     }
 
+    /**
+     * Iterates all known workers and updates the max Job memory allowed.
+     */
     public void updateMaxMemory()
     {
         this.workerListLock.lock();
@@ -199,6 +239,10 @@ public class JobManager implements Runnable
         }
     }
 
+    /**
+     * Removes a Worker Connection
+     * @param worker Worker Connection to be removed
+     */
     public void removeWorker(WorkerConnectionHandler worker)
     {
         this.workerListLock.lock();
@@ -247,6 +291,10 @@ public class JobManager implements Runnable
         }
     }
 
+    /**
+     * Counts the number of job pending execution
+     * @return COunt of pending jobs.
+     */
     public int countPendingJobs()
     {
         this.pendingJobsLock.lock();
@@ -260,6 +308,9 @@ public class JobManager implements Runnable
         }
     }
 
+    /**
+     * Run function that has all the logic to distribute pending Jobs to the Workers Servers.
+     */
     @Override
     public void run()
     {

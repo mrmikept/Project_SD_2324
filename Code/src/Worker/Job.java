@@ -8,21 +8,21 @@ import java.util.Objects;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * Class for a Job.
+ */
 public class Job implements Serializable, Comparable<Job>
 {
-    public static final int PENDING = 0;
-    public static final int EXECUTING = 1;
-    public static final int SUCESS = 2;
-    public static final int ERROR = 3;
+    public static final int PENDING = 0; // Identifies a pending state
+    public static final int EXECUTING = 1; // Identifies a executing state
+    public static final int SUCESS = 2; // Identifies a sucess state
+    public static final int ERROR = 3; // Identifies a error on execution
     private int id; // Job identifier
     private String user; // User who requested the execution of the Job
     private byte[] jobCode; // Job code to be executed
     private int memory; // Necessary Memory for the job execution
-    private int priority;
-    private int state;
-    private ReentrantLock jobLock;
-    private Condition condition;
-
+    private int priority; // Priority value of the job to be executed
+    private int state; // State of the Job, Pending, Executing, Sucess or Error.
     public Job()
     {
         this.id = -1;
@@ -37,10 +37,8 @@ public class Job implements Serializable, Comparable<Job>
         this.user = user;
         this.jobCode = jobCode;
         this.memory = memory;
-        this.jobLock = new ReentrantLock();
         this.priority = 0;
         this.state = state;
-        this.condition = this.jobLock.newCondition();
     }
 
     public int getId() {
@@ -90,6 +88,10 @@ public class Job implements Serializable, Comparable<Job>
         return this.priority;
     }
 
+    /**
+     * Function to serialize a Job object into a byte array.
+     * @return byte array with the job information.
+     */
     public byte[] serialize() {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -114,26 +116,32 @@ public class Job implements Serializable, Comparable<Job>
         return null;
     }
 
-    public void deserialize(byte[] data)
+    /**
+     * Function to deserialize a Job from a byte array
+     * @param data array of bytes with the job information
+     * @return A Job object
+     */
+    public static Job deserialize(byte[] data)
     {
         try
         {
             ByteArrayInputStream bais = new ByteArrayInputStream(data);
             DataInputStream dataInputStream = new DataInputStream(bais);
             try {
-                this.id = dataInputStream.readInt();
-                this.user = dataInputStream.readUTF();
-                this.memory = dataInputStream.readInt();
-                this.state = dataInputStream.readInt();
+                int id = dataInputStream.readInt();
+                String user = dataInputStream.readUTF();
+                int memory = dataInputStream.readInt();
+                int state = dataInputStream.readInt();
                 int size = dataInputStream.readInt();
-                this.jobCode = new byte[size];
-                dataInputStream.readFully(this.jobCode);
+                byte[] jobCode = new byte[size];
+                dataInputStream.readFully(jobCode);
+                return new Job(id,user,jobCode,memory,state);
             } finally {
                 bais.close();
                 dataInputStream.close();
             }
-        } catch (IOException ignored) {
-
+        } catch (IOException e) {
+            throw  new RuntimeException(e);
         }
     }
 

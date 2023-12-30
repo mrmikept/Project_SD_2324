@@ -9,6 +9,9 @@ import java.net.Socket;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * Runnable class to handle sending and receiving messages from a worker.
+ */
 public class WorkerConnectionHandler implements Runnable
 {
     int id;
@@ -36,6 +39,11 @@ public class WorkerConnectionHandler implements Runnable
         return this.id;
     }
 
+    /**
+     * Waits for the message with the worker total memory.
+     * @return true if sucessfull, false otherwise
+     * @throws IOException
+     */
     private boolean receiveWorkerMemory() throws IOException {
         while (this.totalMemory == 0)
         {
@@ -58,12 +66,20 @@ public class WorkerConnectionHandler implements Runnable
         return true;
     }
 
+    /**
+     * Removes the memory of the job from the used memory of the worker and adds the job to the completedJobs map in the Job Manager.
+     * @param job
+     */
     private void addCompletedJob(Job job)
     {
         this.removeMemory(job.getMemory());
         this.jobManager.addCompletedJob(job, this.id);
     }
 
+    /**
+     * Adds a value of memory to the used memory
+     * @param memory memory to be added
+     */
     private void addMemory(int memory)
     {
         this.memoryLock.lock();
@@ -75,6 +91,10 @@ public class WorkerConnectionHandler implements Runnable
         }
     }
 
+    /**
+     * Removes a value of memory in the used memory
+     * @param memory
+     */
     private void removeMemory(int memory)
     {
         this.memoryLock.lock();
@@ -86,6 +106,10 @@ public class WorkerConnectionHandler implements Runnable
         }
     }
 
+    /**
+     * Gets the used memory of the worker.
+     * @return
+     */
     public int getUsedMemory()
     {
         this.memoryLock.lock();
@@ -96,11 +120,19 @@ public class WorkerConnectionHandler implements Runnable
         }
     }
 
+    /**
+     * GEts the total memory of the worker
+     * @return
+     */
     public int getTotalMemory()
     {
         return this.totalMemory;
     }
 
+    /**
+     * Sends a Job to the Worker Server to Execute
+     * @param job
+     */
     public void sendJobRequest(Job job)
     {
         this.addMemory(job.getMemory());
@@ -108,6 +140,11 @@ public class WorkerConnectionHandler implements Runnable
         System.out.println("Job " + job.getId() + " of user " + job.getUser() + " (memory nedded: " + job.getMemory() +  ") was sent to be executed in Worker Server " + this.getId() + " memory used " + this.getUsedMemory() + " bytes, of " + this.getTotalMemory() + " bytes.");
     }
 
+    /**
+     * Function to handle incoming messages from the Worker Server.
+     * @return True if sucessfull, False otherwise
+     * @throws IOException
+     */
     public boolean handle() throws IOException {
         while (true)
         {
@@ -115,8 +152,7 @@ public class WorkerConnectionHandler implements Runnable
             if (message == null) return false;
             if (message.getType() == Message.JOBRESULT)
             {
-                Job job = new Job();
-                job.deserialize(message.getMessage());
+                Job job = Job.deserialize(message.getMessage());
                 this.addCompletedJob(job);
             }
             if (message.getType() == Message.CLOSECONNECTION)
@@ -127,6 +163,9 @@ public class WorkerConnectionHandler implements Runnable
         return true;
     }
 
+    /**
+     * Close the connection with the worker server and removes the worker connector from the Job Manager
+     */
     public void close()
     {
         this.jobManager.removeWorker(this);

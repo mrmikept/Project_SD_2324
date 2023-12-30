@@ -27,6 +27,9 @@ public class MessageTypeWaiters
         this.readLock = l.readLock();
     }
 
+    /**
+     * Adds a waiter for a certain message
+     */
     public void addWaiter()
     {
         this.writeLock.lock();
@@ -37,6 +40,10 @@ public class MessageTypeWaiters
         }
     }
 
+    /**
+     * Removes the first message from the queue.
+     * @return the message in the queue
+     */
     public byte[] getMessage()
     {
         this.writeLock.lock();
@@ -48,6 +55,10 @@ public class MessageTypeWaiters
         }
     }
 
+    /**
+     * Adds a Message to the queue to be retrieved later with the getMessage() method.
+     * @param data The data of the message
+     */
     public void addMessage(byte[] data)
     {
         this.writeLock.lock();
@@ -58,6 +69,10 @@ public class MessageTypeWaiters
         }
     }
 
+    /**
+     * Verifies if the message queue is Empty.
+     * @return True if the queue is empty or False otherwise
+     */
     public boolean isQueueEmpty()
     {
         this.readLock.lock();
@@ -68,6 +83,9 @@ public class MessageTypeWaiters
         }
     }
 
+    /**
+     * Removes a waiter for a certain message
+     */
     public void removeWaiter()
     {
         this.writeLock.lock();
@@ -79,6 +97,10 @@ public class MessageTypeWaiters
         }
     }
 
+    /**
+     * Gets the total number of waiters in this class.
+     * @return
+     */
     public int getWaiters()
     {
         this.readLock.lock();

@@ -11,6 +11,9 @@ import java.nio.file.Path;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.List;
 
+/**
+ * Controller class for the client system and client interface
+ */
 public class ClientController
 {
     private final static String JOBSFOLDER = System.getProperty("user.home") + "/CloudServiceApp/ClientJobs/";
@@ -19,6 +22,11 @@ public class ClientController
     private String username;
     private Thread jobNotifier;
 
+    /**
+     * Constructor for the Client controller between Client Interface and Client System
+     * @param system Client system with all the methods to operate the program
+     * @param cliInterface Client Interface with all the menu options available
+     */
     public ClientController(ClientSystem system, ClientInterface cliInterface) {
         this.system = system;
         this.cliInterface = cliInterface;
@@ -75,11 +83,21 @@ public class ClientController
         this.jobNotifier.setName("Job Notifier Thread");
     }
 
+    /**
+     * Checks if a string is composed with only digits.
+     * @param string string to check
+     * @return true if it's only Digits and false otherwise
+     */
     public boolean isDigit(String string)
     {
         return string.matches("\\d+");
     }
 
+    /**
+     * Controller for the loggin and register menu of the client
+     * @return returns 0 if sucessfull or -1 to exit the program safelly.
+     * @throws Exception
+     */
     public int startMenu() throws Exception {
         int option = 0;
         String username, password, response;
@@ -146,6 +164,11 @@ public class ClientController
 
     }
 
+    /**
+     * Controller for the logged in menu
+     * @return -1 to signal the program to close.
+     * @throws Exception
+     */
     public int clientMenu() throws Exception {
         this.createJobsFolder();
         int option = 0;
@@ -258,6 +281,9 @@ public class ClientController
         return -1;
     }
 
+    /**
+     * Creates the necessary folders to put job codes and job results!
+     */
     public void createJobsFolder()
     {
         File folder = new File(JOBSFOLDER + this.username);
@@ -274,6 +300,11 @@ public class ClientController
         }
     }
 
+    /**
+     * Reads a file
+     * @param filename name of the file.
+     * @return byte array with content of the file.
+     */
     public byte[] readJobCodeFile(String filename)
     {
         try
@@ -287,6 +318,10 @@ public class ClientController
         }
     }
 
+    /**
+     * Writes the Result of a Job in the results folder
+     * @param job Job to write
+     */
     public void saveJobResult(Job job)
     {
         try

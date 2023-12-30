@@ -1,5 +1,8 @@
 package Cliente;
 
+/**
+ * Class with all the menu interfaces for the client.
+ */
 public class ClientInterface
 {
     public String startMenu()
@@ -19,7 +22,7 @@ public class ClientInterface
                 "1 - Job execution request\n" +
                 "2 - Job status\n" +
                 "3 - Service status\n" +
-                "0 - Logout\n\n" +
+                "0 - Logout and Exit\n\n" +
                 "Chose an option:";
     }
 }

@@ -9,46 +9,55 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * Worker Server Class to receive job request to execute and send result
+ */
 public class Worker
 {
-    public int workerMemory;
-    public Socket socket;
-    public Connector connector;
-    public ReentrantLock writeLock;
+    public int workerMemory; // Memory of the worker server
+    public Socket socket; // Socket with the connection with the central server
+    public Connector connector; // Connector to send and receive Messages
     private List<Thread> threadList;
+    private ReentrantLock threadListLock;
 
     public Worker(int memory, String serverAddr, int port) throws IOException {
         this.workerMemory = memory;
         this.socket = new Socket(serverAddr,port);
         this.connector = new Connector(this.socket);
-        this.writeLock = new ReentrantLock();
         this.threadList = new ArrayList<>();
+        this.threadListLock = new ReentrantLock();
     }
 
+    /**
+     * Sends a job result to the central server
+     * @param job Job result of a Job
+     */
     public void sendCompletedJob(Job job)
     {
-        this.writeLock.lock();
-        try
-        {
-            System.out.println("Sending result for job " + job.getId() + " of user " + job.getUser() + " to central server!");
+        System.out.println("Sending result for job " + job.getId() + " of user " + job.getUser() + " to central server!");
+        try {
             this.connector.send("worker",Message.JOBRESULT,"worker",job.serialize());
-        } finally {
-            this.writeLock.unlock();
+        } catch (RuntimeException e)
+        {
+            System.out.println("Something went wrong sending Job Result to the central server...");
         }
     }
 
+    /**
+     * Sends the total memory information of the worker server to the central server
+     */
     public void sendServerMemory()
     {
-        this.writeLock.lock();
-        try
-        {
-            this.connector.send("Worker", Message.MEMORYINFO,"Worker",String.valueOf(this.workerMemory).getBytes());
-            System.out.println("Memory sent to Central Server!");
-        } finally {
-            this.writeLock.unlock();
-        }
+        this.connector.send("Worker", Message.MEMORYINFO,"Worker",String.valueOf(this.workerMemory).getBytes());
+        System.out.println("Memory sent to Central Server!");
+
     }
 
+    /**
+     * Start fucntion to start the communications between the worker server and central server.
+     * It also handles messages from the central server.
+     * @throws IOException
+     */
     public void start() throws IOException {
         System.out.println("Starting Worker Server...");
         this.sendServerMemory();
@@ -63,12 +72,16 @@ public class Worker
             if (message.getType() == Message.JOBREQUEST)
             {
                 System.out.println("Received a new Job request from Server.");
-                Job job = new Job();
-                job.deserialize(message.getMessage());
+                Job job = Job.deserialize(message.getMessage());
                 Thread jobExecutor = new Thread(new JobExecutor(this,job));
                 jobExecutor.setName("Job Executor for job " + job.getId() + " from user " + job.getUser());
                 jobExecutor.start();
-                this.threadList.add(jobExecutor);
+                this.threadListLock.lock();
+                try {
+                    this.threadList.add(jobExecutor);
+                } finally {
+                    threadListLock.unlock();
+                }
             }
             else
             {
@@ -77,6 +90,11 @@ public class Worker
         }
     }
 
+    /**
+     * Function to stop the worker server
+     * @throws IOException
+     * @throws InterruptedException
+     */
     public void stop() throws IOException, InterruptedException {
         System.out.println("Joining threads...");
         for (Thread t : this.threadList)

@@ -1,5 +1,8 @@
 package Tests;
 
+/**
+ * Test Class. ONLY FOR TESTS.
+ */
 public class Test
 {
     public static void main(String[] args) throws InterruptedException {

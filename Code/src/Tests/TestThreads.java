@@ -9,6 +9,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
 
+/**
+ * Runnable class for the Test Class. ONLY FOR TESTS.
+ */
 public class TestThreads implements Runnable
 {
     public String username;
